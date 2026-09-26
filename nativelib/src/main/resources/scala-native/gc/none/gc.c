@@ -7,6 +7,7 @@
 // Windows runtime it might happen while preprocessing some of stdlib headers.
 #define _CRT_SECURE_NO_WARNINGS
 
+#include <Python.h>
 #include <stdlib.h>
 #include <stdio.h>
 #include "shared/MemoryMap.h"
@@ -124,23 +125,24 @@ void scalanative_GC_init() {
 
 void *scalanative_GC_alloc(Rtti *info, size_t size) {
     size = size + (8 - size % 8);
-#ifndef GC_ASAN
-    if (current + size < end) {
-        Object *alloc = (Object *)current;
-        alloc->rtti = info;
-        current += size;
-        TOTAL_ALLOCATED += size;
-        return alloc;
-    } else {
-        scalanative_GC_init();
-        return scalanative_GC_alloc(info, size);
-    }
-#else
-    Object *alloc = (Object *)calloc(size, 1);
+// #ifndef GC_ASAN
+//     if (current + size < end) {
+//         Object *alloc = (Object *)current;
+//         alloc->rtti = info;
+//         current += size;
+//         TOTAL_ALLOCATED += size;
+//         return alloc;
+//     } else {
+//         scalanative_GC_init();
+//         return scalanative_GC_alloc(info, size);
+//     }
+// #else
+    printf("Allocating new object %zu\n", size);
+    Object *alloc = (Object *) PyObject_Malloc(size); // (Object *)calloc(size, 1);
     alloc->rtti = info;
     TOTAL_ALLOCATED += size;
     return alloc;
-#endif
+// #endif
 }
 
 void *scalanative_GC_alloc_small(Rtti *info, size_t size) {

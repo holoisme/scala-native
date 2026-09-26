@@ -1,5 +1,7 @@
 import build.Build
 
+ThisBuild / version := "0.5.12-cpython"
+
 // scalafmt: { align.preset = most}
 lazy val scalaNative              = Build.root
 lazy val nscPlugin                = Build.nscPlugin
