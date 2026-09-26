@@ -1,20 +1,20 @@
 package scala.scalanative
 package build
 
-import java.nio.file.{Files, Path}
-
+import java.nio.file.Files
+import java.nio.file.Path
 import scala.collection.mutable
-import scala.concurrent._
-import scala.util.Success
-
+import scala.concurrent.*
 import scala.scalanative.checker.Check
 import scala.scalanative.codegen.PlatformInfo
 import scala.scalanative.codegen.llvm.CodeGen
 import scala.scalanative.interflow.Interflow
-import scala.scalanative.linker.{
-  Link, LinkingException, Reach, ReachabilityAnalysis
-}
+import scala.scalanative.linker.Link
+import scala.scalanative.linker.LinkingException
+import scala.scalanative.linker.Reach
+import scala.scalanative.linker.ReachabilityAnalysis
 import scala.scalanative.util.Scope
+import scala.util.Success
 
 /** Internal utilities to instrument Scala Native linker, optimizer and codegen.
  */
@@ -240,7 +240,7 @@ private[scalanative] object ScalaNative {
 
     if (config.check || forceQuickCheck) {
       config.logger
-        .timeAsync(s"Checking intermediate code ($checkMode)") {
+        .timeAsync(s"Checking intermediate code22222222222 ($checkMode)") {
           if (performFullCheck) Check(analysis)
           else Check.quick(analysis)
         }

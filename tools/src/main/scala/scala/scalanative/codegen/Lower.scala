@@ -5,9 +5,11 @@ package codegen
 import scala.collection.mutable
 
 import scalanative.interflow.UseDef.eliminateDeadCode
-import scalanative.linker._
-import scalanative.nir.ControlFlow.{Block, Graph}
-import scalanative.util.{ScopedVar, unsupported}
+import scalanative.linker.*
+import scalanative.nir.ControlFlow.Block
+import scalanative.nir.ControlFlow.Graph
+import scalanative.util.ScopedVar
+import scalanative.util.unsupported
 
 private[scalanative] object Lower {
 
@@ -1430,6 +1432,12 @@ private[scalanative] object Lower {
       val zone = v.map(genVal(buf, _))
 
       val size = meta.layout(cls).size
+      println(
+        s"[Lower] ${cls.name.show} " +
+          s"ObjectHeader=${meta.layouts.ObjectHeader.layout} " +
+          s"ObjectHeaderSize=${meta.layouts.ObjectHeader.size} " +
+          s"layoutSize=$size"
+      )
       assert(size == size.toInt)
 
       zone match {

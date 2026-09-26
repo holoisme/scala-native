@@ -1,6 +1,7 @@
 #ifndef IMMIX_OBJECTHEADER_H
 #define IMMIX_OBJECTHEADER_H
 
+#include <Python.h>
 #include <stdint.h>
 #include <stdbool.h>
 #include <stddef.h>
@@ -63,6 +64,7 @@ typedef struct Rtti {
 typedef word_t *Field_t;
 
 typedef struct {
+    PyObject py;
     Rtti *rtti;
 #ifdef USES_LOCKWORD
     word_t *lockWord;
@@ -71,6 +73,7 @@ typedef struct {
 } Object;
 
 typedef struct {
+    PyObject py;
     Rtti *rtti;
 #ifdef USES_LOCKWORD
     word_t *lockWord;
@@ -86,6 +89,7 @@ typedef struct {
 
 typedef struct StringObject {
     // ObjectHeader
+    PyObject py;
     Rtti *rtti;
 #ifdef USES_LOCKWORD
     word_t *lockWord;

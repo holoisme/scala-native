@@ -1,7 +1,8 @@
 package scala.scalanative
 package codegen
 
-import scalanative.linker.{Class, Field}
+import scalanative.linker.Class
+import scalanative.linker.Field
 
 private[codegen] class FieldLayout(cls: Class)(implicit meta: Metadata) {
 
@@ -29,13 +30,29 @@ private[codegen] class FieldLayout(cls: Class)(implicit meta: Metadata) {
       (fields, layout)
     } else {
       val rttiHeader = if (isArray) ArrayHeader else ObjectHeader
+      println(
+        s"[FieldLayout] ${cls.name.show} " +
+          s"header=${rttiHeader.layout} " +
+          s"headerSize=${rttiHeader.size} " +
+          s"fields=${entries.map(_.name).mkString("[", ", ", "]")}"
+      )
       val layout = MemoryLayout(rttiHeader.layout +: entries.map(_.ty))
+      println(
+        s"[FieldLayout] ${cls.name.show} TOTAL=${layout.size}"
+      )
       (entries, layout)
     }
   }
 
   val struct = nir.Type.StructValue(layout.tys.map(_.ty))
   val size = layout.size
+  // println(
+  //   s"[FieldLayout] ${cls.name} " +
+  //   s"header=${ObjectHeader.layout} " +
+  //   s"headerSize=${MemoryLayout.sizeOf(ObjectHeader.layout)} " +
+  //   s"fields=${entries.map(_.name)} " +
+  //   s"size=$size"
+  // )
   val referenceOffsetsValue = nir.Val.Const(
     nir.Val.ArrayValue(nir.Type.Int, layout.referenceFieldsOffsets)
   )

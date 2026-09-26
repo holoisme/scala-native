@@ -3,6 +3,10 @@ package codegen
 
 private[codegen] class CommonMemoryLayouts(implicit meta: Metadata) {
 
+  println(
+    s">>> MODIFIED CommonMemoryLayouts LOADED: ObjectHeader.size=${ObjectHeader.size}"
+  )
+
   sealed abstract class Layout(types: List[nir.Type]) {
     def this(types: nir.Type*) = this(types.toList)
 
@@ -10,8 +14,15 @@ private[codegen] class CommonMemoryLayouts(implicit meta: Metadata) {
     def size: Long = MemoryLayout.sizeOf(layout)(meta.platform)
   }
 
+  // object PyObjectHeader
+  //   extends Layout(
+  //     nir.Type.Size :: // Py_ssize_t ob_refcnt
+  //     nir.Type.Ptr ::  // PyTypeObject* ob_type
+  //     Nil
+  //   )
+
   private object Common {
-    final val RttiIdx = 0
+    final val RttiIdx = 2
     final val LockWordIdx =
       if (meta.usesLockWords) RttiIdx + 1
       else -1
@@ -84,8 +95,13 @@ private[codegen] class CommonMemoryLayouts(implicit meta: Metadata) {
 
   object ObjectHeader
       extends Layout(
-        nir.Type.Ptr :: // RTTI
-          meta.lockWordType.toList // optional, multithreading only
+        // PyObjectHeader.layout ::
+        nir.Type.Size :: // Py_ssize_t ob_refcnt
+        nir.Type.Ptr ::  // PyTypeObject* ob_type
+        nir.Type.Ptr ::
+        meta.lockWordType.toList
+        // :: // RTTI
+        //   meta.lockWordType.toList // optional, multithreading only
       ) {
     final val RttiIdx = Common.RttiIdx
     final val LockWordIdx = Common.LockWordIdx
@@ -102,6 +118,8 @@ private[codegen] class CommonMemoryLayouts(implicit meta: Metadata) {
 
   object ArrayHeader
       extends Layout(
+        nir.Type.Size :: // Py_ssize_t ob_refcnt
+        nir.Type.Ptr ::  // PyTypeObject* ob_type
         nir.Type.Ptr :: // RTTI
           meta.lockWordType.toList ::: // optional, multithreading only
           nir.Type.Int :: // length

@@ -1,18 +1,21 @@
 package scala.scalanative
 package build
 
-import java.io.{File, PrintWriter}
-import java.nio.file.{Files, Path, Paths, StandardCopyOption}
+import _root_.java.io.IOException
 
-import scala.concurrent._
-import scala.sys.process._
-import scala.util.{Failure, Success}
-
+import java.io.File
+import java.io.PrintWriter
+import java.nio.file.Files
+import java.nio.file.Path
+import java.nio.file.Paths
+import java.nio.file.StandardCopyOption
+import scala.concurrent.*
 import scala.scalanative.build.IO.RichPath
 import scala.scalanative.linker.ReachabilityAnalysis
 import scala.scalanative.nir.Attr.Link
-
-import _root_.java.io.IOException
+import scala.sys.process.*
+import scala.util.Failure
+import scala.util.Success
 
 /** Internal utilities to interact with LLVM command-line tools. */
 private[scalanative] object LLVM {
@@ -235,7 +238,8 @@ private[scalanative] object LLVM {
         else Seq("pthread", "dl", "m")
       platformsLinks ++ srclinks ++ gclinks
     }.distinct
-    config.logger.info(s"Linking with [${links.mkString(", ")}]")
+    config.logger.info(s"Linking222 with [${links.mkString(", ")}]")
+    config.logger.info(s">>>>>>>>>>>>>>>>> PLEASE <<<<<<<<<<<<<<<<<")
     // GNU ld and ld.lld support the --as-needed flag which avoids linking
     // libraries (defined after the option) you don't use. LLVM intrinsics
     // call libm which is not added by default. However, the math functions
