@@ -240,7 +240,7 @@ private[scalanative] object ScalaNative {
 
     if (config.check || forceQuickCheck) {
       config.logger
-        .timeAsync(s"Checking intermediate code22222222222 ($checkMode)") {
+        .timeAsync(s"Checking intermediate code ($checkMode)") {
           if (performFullCheck) Check(analysis)
           else Check.quick(analysis)
         }

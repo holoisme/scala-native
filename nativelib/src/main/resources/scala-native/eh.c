@@ -310,7 +310,15 @@ __attribute__((noreturn)) void scalanative_throw(Exception obj) {
                 "a valid catch handler for exception when unwinding execution "
                 "stack.\n",
                 snFatalErrorPrefix);
-        scalanative_Throwable_showStackTrace(obj);
+        fprintf(stderr,
+                "%s Exception: %p\n",
+                snFatalErrorPrefix,
+                obj);
+        fprintf(stderr,
+                "%s Aborting...\n",
+                snFatalErrorPrefix);
+        
+        // scalanative_Throwable_showStackTrace(obj);
         fflush(stderr);
         fflush(stdout);
         abort();

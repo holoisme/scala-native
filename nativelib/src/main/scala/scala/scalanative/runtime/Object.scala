@@ -1,9 +1,9 @@
 package scala.scalanative.runtime
 
 import scala.scalanative.meta.LinktimeInfo.isMultithreadingEnabled
-import scala.scalanative.runtime.Intrinsics._
-import scala.scalanative.runtime._
-import scala.scalanative.unsigned._
+import scala.scalanative.runtime.*
+import scala.scalanative.runtime.Intrinsics.*
+import scala.scalanative.unsigned.*
 
 // emmited as java.lang.Object
 private[runtime] class _Object {
@@ -19,7 +19,8 @@ private[runtime] class _Object {
     getClass.getName + "@" + Integer.toHexString(hashCode)
 
   @inline def __getClass(): _Class[_] = {
-    val ptr = castObjectToRawPtr(this)
+    val thisptr = castObjectToRawPtr(this)
+    val ptr = elemRawPtr(thisptr, MemoryLayout.Object.RttiOffset)
     val rtti = loadRawPtr(ptr)
     castRawPtrToObject(rtti).asInstanceOf[_Class[_]]
   }

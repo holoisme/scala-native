@@ -157,21 +157,19 @@ void *scalanative_GC_alloc(Rtti *info, size_t size) {
     // Object *alloc = (Object *) PyMem_Malloc(size + 8);
     Object *alloc = (Object *) PyObject_Calloc(1, size);
 
-    Py_SET_REFCNT(alloc, 1);
+    Py_SET_REFCNT(alloc, 12321);
     Py_SET_TYPE(&alloc->py, NULL);
 
-    printf(
-    "alloc: info=%p size=%zu rtti->size=%u sizeof(PyObject)=%zu "
-    "offsetof(rtti)=%zu sizeof(Object)=%zu\n",
-    (void *)info,
-    size,
-    info->size,
-    sizeof(PyObject),
-    offsetof(Object, rtti),
-    sizeof(Object)
-);
-    
-    alloc->rtti = info;
+    //printf(
+    //"alloc: info=%p size=%zu rtti->size=%u sizeof(PyObject)=%zu "
+    //"offsetof(rtti)=%zu sizeof(Object)=%zu\n",
+    //(void *)info,
+    //size,
+    //info->size,
+    //sizeof(PyObject),
+    //offsetof(Object, rtti),
+    //sizeof(Object)
+//);
     
     fprintf(stderr,
             "Allocation (%zu bytes) := %p\n",

@@ -2,7 +2,8 @@ package scala.scalanative.runtime
 
 import scala.scalanative.annotation.alwaysinline
 import scala.scalanative.meta.LinktimeInfo.isMultithreadingEnabled
-import scala.scalanative.runtime.Intrinsics.{castRawSizeToInt, sizeOf}
+import scala.scalanative.runtime.Intrinsics.castRawSizeToInt
+import scala.scalanative.runtime.Intrinsics.sizeOf
 
 private[runtime] object MemoryLayout {
 
@@ -20,13 +21,13 @@ private[runtime] object MemoryLayout {
   )
 
   object Rtti {
-    @alwaysinline def ClassOffset = 0
+    @alwaysinline def ClassOffset = PtrSize * 2
     @alwaysinline def LockWordOffset =
-      if (isMultithreadingEnabled) PtrSize
-      else requiresEnabledMulithreading
+      ClassOffset + (if (isMultithreadingEnabled) PtrSize
+      else requiresEnabledMulithreading)
     @alwaysinline def IdOffset =
       if (isMultithreadingEnabled) LockWordOffset + PtrSize
-      else PtrSize
+      else ClassOffset + PtrSize
 
     @deprecated("No longer used", since = "0.5.6") @alwaysinline
     def TraitIdOffset = -1
@@ -45,30 +46,30 @@ private[runtime] object MemoryLayout {
   }
 
   object ClassRtti {
-    @alwaysinline def RttiOffset = 0
+    @alwaysinline def RttiOffset = PtrSize * 2
     @alwaysinline def SizeOffset = RttiOffset + Rtti.size
     // Remaining fields has optional or contain intrinsic data,
     // they should never be accessed in the runtime
   }
 
   object Object {
-    @alwaysinline def RttiOffset = 0
+    @alwaysinline def RttiOffset = PtrSize * 2
     @alwaysinline def LockWordOffset =
-      if (isMultithreadingEnabled) PtrSize
-      else requiresEnabledMulithreading
+      RttiOffset + (if (isMultithreadingEnabled) PtrSize
+      else requiresEnabledMulithreading)
     @alwaysinline def FieldsOffset =
       if (isMultithreadingEnabled) LockWordOffset + PtrSize
-      else PtrSize
+      else RttiOffset + PtrSize
   }
 
   object Array {
-    @alwaysinline def RttiOffset = 0
+    @alwaysinline def RttiOffset = PtrSize * 2
     @alwaysinline def LockWordOffset =
-      if (isMultithreadingEnabled) PtrSize
-      else requiresEnabledMulithreading
+      RttiOffset + (if (isMultithreadingEnabled) PtrSize
+      else requiresEnabledMulithreading)
     @alwaysinline def LengthOffset =
       if (isMultithreadingEnabled) LockWordOffset + PtrSize
-      else PtrSize
+      else RttiOffset + PtrSize
     @alwaysinline def StrideOffset = LengthOffset + IntSize
     @alwaysinline def ValuesOffset = StrideOffset + IntSize
   }

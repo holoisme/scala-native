@@ -41,6 +41,7 @@ typedef struct ITableEntry {
 
 typedef struct Rtti {
     // Fields shared by all classes
+    PyObject py;
     struct BaseRtti {
         word_t *cls;
 #ifdef USES_LOCKWORD

@@ -238,8 +238,7 @@ private[scalanative] object LLVM {
         else Seq("pthread", "dl", "m")
       platformsLinks ++ srclinks ++ gclinks
     }.distinct
-    config.logger.info(s"Linking222 with [${links.mkString(", ")}]")
-    config.logger.info(s">>>>>>>>>>>>>>>>> PLEASE <<<<<<<<<<<<<<<<<")
+    config.logger.info(s"Linking with [${links.mkString(", ")}]")
     // GNU ld and ld.lld support the --as-needed flag which avoids linking
     // libraries (defined after the option) you don't use. LLVM intrinsics
     // call libm which is not added by default. However, the math functions

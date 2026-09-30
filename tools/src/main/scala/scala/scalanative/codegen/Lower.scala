@@ -3,6 +3,8 @@ package scala.scalanative
 package codegen
 
 import scala.collection.mutable
+import scala.scalanative.nir.InstructionBuilder
+import scala.scalanative.nir.Type.Ptr as rttiObj
 
 import scalanative.interflow.UseDef.eliminateDeadCode
 import scalanative.linker.*
@@ -10,6 +12,8 @@ import scalanative.nir.ControlFlow.Block
 import scalanative.nir.ControlFlow.Graph
 import scalanative.util.ScopedVar
 import scalanative.util.unsupported
+
+// import scalanative.codegen.CommonMemoryLayouts
 
 private[scalanative] object Lower {
 
@@ -422,7 +426,11 @@ private[scalanative] object Lower {
             val toty = nir.Val.Local(fresh(), nir.Type.Ptr)
 
             buf.label(slowPath, Seq(obj, toty))
-            val fromty = buf.let(nir.Op.Load(nir.Type.Ptr, obj), unwind)
+            // val fromty = buf.let(nir.Op.Load(nir.Type.Ptr, obj), unwind)
+            val rttiPtr = buf.let(nir.Op.Elem(nir.Type.Ptr, obj, Seq(nir.Val.Int(meta.layouts.ObjectHeader.RttiIdx))), unwind)
+            val fromty = buf.let(nir.Op.Load(nir.Type.Ptr, rttiPtr), unwind)
+            // val fromty = buf.let(nir.Op.Elem(nir.Type.Ptr, fromtyObj, Seq(nir.Val.Int(meta.layouts.ClassRtti.RttiIdx))), unwind)
+
             buf.call(
               throwClassCastTy,
               throwClassCastVal,
@@ -1122,7 +1130,28 @@ private[scalanative] object Lower {
           s"The virtual table of ${cls.name} does not contain $sig"
         )
 
-        val typeptr = let(nir.Op.Load(nir.Type.Ptr, obj), unwind)
+        // val rttiPtr = nir.Op.Elem(
+        //   meta.layouts.ObjectHeader.layout,
+        //   obj,
+        //   Seq(zero, nir.Val.Int(meta.layouts.ObjectHeader.RttiIdx))
+        // )
+
+        // val typeptr = let(
+        //   nir.Op.Load(nir.Type.Ptr, rttiPtr.ptr),
+        //   unwind
+        // )
+
+        // println(s"Lowering ${sig.show} via genMethodOp")
+        val rttiPtr = let(nir.Op.Elem(nir.Type.Ptr, obj, Seq(nir.Val.Int(meta.layouts.ObjectHeader.RttiIdx))), unwind)
+        val typeptr = let(nir.Op.Load(nir.Type.Ptr, rttiPtr), unwind)
+        // val typeptr = let(nir.Op.Elem(nir.Type.Ptr, typeptrObj, Seq(nir.Val.Int(meta.layouts.ClassRtti.RttiIdx))), unwind)
+        
+        // val c = new CommonMemoryLayouts()
+        // c.ObjectHeader.
+
+        // val commonMemory = new CommonMemoryLayouts()
+
+        // val typeptr = let(nir.Op.Load(nir.Type.Ptr, obj), unwind)
         val methptrptr = let(
           nir.Op.Elem(
             rtti(cls).struct,
@@ -1141,7 +1170,22 @@ private[scalanative] object Lower {
             .indexOf(sig)
             .ensuring(_ >= 0, s"Not found ${sig.show} entry in ${trt.name.id} methods")
         )
-        val rtti = let(nir.Op.Load(nir.Type.Ptr, obj), unwind)
+        // val rttiPtr = nir.Op.Elem(
+        //   meta.layouts.ObjectHeader.layout,
+        //   obj,
+        //   Seq(zero, nir.Val.Int(meta.layouts.ObjectHeader.RttiIdx))
+        // )
+
+        // val rtti = let(
+        //   nir.Op.Load(nir.Type.Ptr, rttiPtr),
+        //   unwind
+        // )
+        // println(s"Lowering ${sig.show} via genTraitVirtualLookup")
+        val rttiPtr = let(nir.Op.Elem(nir.Type.Ptr, obj, Seq(nir.Val.Int(meta.layouts.ObjectHeader.RttiIdx))), unwind)
+        val rtti = let(nir.Op.Load(nir.Type.Ptr, rttiPtr), unwind)
+        // val rtti = let(nir.Op.Elem(nir.Type.Ptr, rttiObj, Seq(nir.Val.Int(meta.layouts.ClassRtti.RttiIdx))), unwind)
+        
+        // val rtti = let(nir.Op.Load(nir.Type.Ptr, obj), unwind)
         genItableLookup(trt, buf, mayBeNotFound = false)(Some(n), rtti, nir.Type.Ptr)(
           genFastPath = (buf, traitId, itableSize, resultLabel) => {
             val itablesPtr = let(nir.Op.Elem(ClassRtti.layout, rtti, ClassRttiItablesPath), unwind)
@@ -1247,7 +1291,25 @@ private[scalanative] object Lower {
           meta.analysis.dynsigs.zipWithIndex.find(_._1 == sig).get._2
 
         // Load the type information pointer
-        val typeptr = load(nir.Type.Ptr, obj, unwind)
+        // val typeptr = load(nir.Type.Ptr, obj, unwind)
+
+        // val rttiPtr = nir.Op.Elem(
+        //   meta.layouts.ObjectHeader.layout,
+        //   obj,
+        //   Seq(zero, nir.Val.Int(meta.layouts.ObjectHeader.RttiIdx))
+        // )
+
+        // val typeptr = let(
+        //   nir.Op.Load(nir.Type.Ptr, rttiPtr.ptr),
+        //   unwind
+        // )
+
+        val rttiPtr = let(nir.Op.Elem(nir.Type.Ptr, obj, Seq(nir.Val.Int(meta.layouts.ObjectHeader.RttiIdx))), unwind)
+        val typeptr = let(nir.Op.Load(nir.Type.Ptr, rttiPtr), unwind)
+        // val typeptr = let(nir.Op.Elem(nir.Type.Ptr, typeptrObj, Seq(nir.Val.Int(meta.layouts.ClassRtti.RttiIdx))), unwind)
+        
+        // println(s"Lowering ${obj.show} reflective thing via genReflectiveLookup")
+
         // Load the dynamic hash map for given type, make sure it's not null
         val mapelem = elem(classRttiType, typeptr, ClassRttiDynmapPath, unwind)
         val mapptr = load(nir.Type.Ptr, mapelem, unwind)
@@ -1318,12 +1380,22 @@ private[scalanative] object Lower {
 
       ty match {
         case ClassRef(cls) if meta.ranges(cls).length == 1 =>
-          val typeptr = let(nir.Op.Load(nir.Type.Ptr, obj), unwind)
+          val rttiPtr = let(nir.Op.Elem(nir.Type.Ptr, obj, Seq(nir.Val.Int(meta.layouts.ObjectHeader.RttiIdx))), unwind)
+          val typeptr = let(nir.Op.Load(nir.Type.Ptr, rttiPtr), unwind)
+          // val typeptr = let(nir.Op.Elem(nir.Type.Ptr, typeptrObj, Seq(nir.Val.Int(meta.layouts.ClassRtti.RttiIdx))), unwind)
+          
+          // println(s"Lowering ${obj.show} class is ${cls.name.show} thing via genIsOp [ClassRef 1]")
           let(nir.Op.Comp(nir.Comp.Ieq, nir.Type.Ptr, typeptr, rtti(cls).const), unwind)
 
         case ClassRef(cls) =>
           val range = meta.ranges(cls)
-          val typeptr = let(nir.Op.Load(nir.Type.Ptr, obj), unwind)
+
+          val rttiPtr = let(nir.Op.Elem(nir.Type.Ptr, obj, Seq(nir.Val.Int(meta.layouts.ObjectHeader.RttiIdx))), unwind)
+          val typeptrObj = let(nir.Op.Load(nir.Type.Ptr, rttiPtr), unwind)
+          val typeptr = let(nir.Op.Elem(nir.Type.Ptr, typeptrObj, Seq(nir.Val.Int(meta.layouts.ClassRtti.RttiIdx))), unwind)
+          
+          // println(s"Lowering ${obj.show} class is ${cls.name.show} thing via genIsOp [ClassRef 2]")
+          // val typeptr = let(nir.Op.Load(nir.Type.Ptr, obj), unwind)
           val idptr = let(nir.Op.Elem(Rtti.layout, typeptr, RttiClassIdPath), unwind)
           val id = let(nir.Op.Load(nir.Type.Int, idptr), unwind)
           val ge = let(nir.Op.Comp(nir.Comp.Sle, nir.Type.Int, nir.Val.Int(range.start), id), unwind)
@@ -1336,7 +1408,28 @@ private[scalanative] object Lower {
             case _             =>
           }
           val traitId = nir.Val.Int(meta.ids(trt))
-          val rtti = let(nir.Op.Load(nir.Type.Ptr, obj), unwind)
+
+          // Base
+          // val rtti = let(nir.Op.Load(nir.Type.Ptr, obj), unwind)
+
+          // val rtti_ = let(nir.Op.Load(nir.Type.Ptr, obj), unwind)
+          // val rttiPtr = nir.Op.Elem(
+          //   meta.layouts.ObjectHeader.layout,
+          //   obj,
+          //   Seq(zero, nir.Val.Int(meta.layouts.ObjectHeader.RttiIdx))
+          // )
+
+          // val rtti = let(
+          //   nir.Op.Load(nir.Type.Ptr, rttiPtr.ptr),
+          //   unwind
+          // )
+          val rttiPtr = let(nir.Op.Elem(nir.Type.Ptr, obj, Seq(nir.Val.Int(meta.layouts.ObjectHeader.RttiIdx))), unwind)
+          val rtti = let(nir.Op.Load(nir.Type.Ptr, rttiPtr), unwind)
+
+          // val rtti = let(nir.Op.Elem(nir.Type.Ptr, rttiObj, Seq(nir.Val.Int(meta.layouts.ClassRtti.RttiIdx))), unwind)
+          
+          // println(s"Lowering ${obj.show} class is ${trt.name.show} thing via genIsOp [TraitRef]")
+
           genItableLookup(trt, buf, mayBeNotFound = true)(None, rtti, nir.Type.Bool)(
             genFastPath = (buf, traitId, itableSize, _) => {
               val itablesPtr = let(nir.Op.Elem(ClassRtti.layout, rtti, ClassRttiItablesPath), unwind)
@@ -1432,12 +1525,6 @@ private[scalanative] object Lower {
       val zone = v.map(genVal(buf, _))
 
       val size = meta.layout(cls).size
-      println(
-        s"[Lower] ${cls.name.show} " +
-          s"ObjectHeader=${meta.layouts.ObjectHeader.layout} " +
-          s"ObjectHeaderSize=${meta.layouts.ObjectHeader.size} " +
-          s"layoutSize=$size"
-      )
       assert(size == size.toInt)
 
       zone match {
@@ -1980,6 +2067,8 @@ private[scalanative] object Lower {
       val charsLength = nir.Val.Int(chars.length)
       val charsConst = nir.Val.Const(
         nir.Val.StructValue(
+          nir.Val.Size(1) :: // py ref count
+          nir.Val.Null :: // py rtti
           rtti(CharArrayCls).const ::
             meta.lockWordVals :::
             charsLength ::
@@ -2006,6 +2095,8 @@ private[scalanative] object Lower {
 
       nir.Val.Const(
         nir.Val.StructValue(
+          nir.Val.Size(1) :: // py ref count
+          nir.Val.Null :: // py rtti
           rtti(StringCls).const ::
             meta.lockWordVals ++
             fieldValues

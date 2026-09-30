@@ -1,7 +1,9 @@
 package scala.scalanative
 package codegen
 
-import scalanative.linker.{Class, ScopeInfo, Trait}
+import scalanative.linker.Class
+import scalanative.linker.ScopeInfo
+import scalanative.linker.Trait
 import scalanative.util.unreachable
 
 private[codegen] class RuntimeTypeInformation(info: ScopeInfo)(implicit
@@ -70,6 +72,8 @@ private[codegen] class RuntimeTypeInformation(info: ScopeInfo)(implicit
     case _ => meta.layouts.Rtti.layout
   }
   lazy val value: nir.Val.StructValue = {
+    val pyRefCnt = nir.Val.Size(1)
+    val pyRtti = nir.Val.Null
     val typeId = nir.Val.Int(meta.ids(info))
     val typeStr = nir.Val.String(typeName)
     val traits = info.linearized
@@ -81,6 +85,8 @@ private[codegen] class RuntimeTypeInformation(info: ScopeInfo)(implicit
     )
 
     val base = nir.Val.StructValue(
+      pyRefCnt ::
+      pyRtti ::
       classConst :: meta.lockWordVals :::
         typeId ::
         interfacesCount ::
