@@ -84,6 +84,7 @@ NOINLINE static ModuleRef __scalanative_startAndWaitForModuleInitialization(
     InitializationContext ctx = {};
     void **expected = NULL;
     if (atomic_compare_exchange_strong(slot, &expected, (void **)&ctx)) {
+        // here maybe generate the python type?
         ModuleRef instance = scalanative_GC_alloc(classInfo, size);
         ctx.initThreadId = getThreadId();
         ctx.instance = instance;

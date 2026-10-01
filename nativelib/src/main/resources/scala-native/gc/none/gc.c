@@ -124,62 +124,24 @@ void scalanative_GC_init() {
 }
 
 void *scalanative_GC_alloc(Rtti *info, size_t size) {
-    // size += sizeof(PyObject);
-    // size = size + (8 - size % 8);
-    size = (size + 7) & ~((size_t)7);    
+    size = (size + 7) & ~((size_t)7); // alignment
 
+    // safety check that will be removed afterwards
     if(size >= 100000) {
         fprintf(stderr,
             "[WARN] Tried to allocate %zu bytes\n",
             size);
         return (void*)0;
     }
-// #ifndef GC_ASAN
-//     if (current + size < end) {
-//         Object *alloc = (Object *)current;
-//         alloc->rtti = info;
-//         current += size;
-//         TOTAL_ALLOCATED += size;
-//         return alloc;
-//     } else {
-//         scalanative_GC_init();
-//         return scalanative_GC_alloc(info, size);
-//     }
-// #else
-    // printf("Allocating new object %zu\n", size);
     
-    //fprintf(stderr,
-    //        "SCALA ALLOC7: size=%zu -> PyObject_Malloc\n",
-    //        size);
-
-    // Object *alloc = (Object *)calloc(size, 1); // INITIAL VERSION
-    // Object *alloc = (Object *) PyMem_RawMalloc(size + 8);
-    // Object *alloc = (Object *) PyMem_Malloc(size + 8);
     Object *alloc = (Object *) PyObject_Calloc(1, size);
 
-    Py_SET_REFCNT(alloc, 12321);
+    Py_SET_REFCNT(alloc, 1);
     Py_SET_TYPE(&alloc->py, NULL);
-
-    //printf(
-    //"alloc: info=%p size=%zu rtti->size=%u sizeof(PyObject)=%zu "
-    //"offsetof(rtti)=%zu sizeof(Object)=%zu\n",
-    //(void *)info,
-    //size,
-    //info->size,
-    //sizeof(PyObject),
-    //offsetof(Object, rtti),
-    //sizeof(Object)
-//);
-    
-    fprintf(stderr,
-            "Allocation (%zu bytes) := %p\n",
-            size,
-            alloc);
 
     alloc->rtti = info;
     TOTAL_ALLOCATED += size;
     return alloc;
-// #endif
 }
 
 void *scalanative_GC_alloc_small(Rtti *info, size_t size) {

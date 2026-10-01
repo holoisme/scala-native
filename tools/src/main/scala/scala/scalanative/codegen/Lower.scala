@@ -1130,28 +1130,8 @@ private[scalanative] object Lower {
           s"The virtual table of ${cls.name} does not contain $sig"
         )
 
-        // val rttiPtr = nir.Op.Elem(
-        //   meta.layouts.ObjectHeader.layout,
-        //   obj,
-        //   Seq(zero, nir.Val.Int(meta.layouts.ObjectHeader.RttiIdx))
-        // )
-
-        // val typeptr = let(
-        //   nir.Op.Load(nir.Type.Ptr, rttiPtr.ptr),
-        //   unwind
-        // )
-
-        // println(s"Lowering ${sig.show} via genMethodOp")
         val rttiPtr = let(nir.Op.Elem(nir.Type.Ptr, obj, Seq(nir.Val.Int(meta.layouts.ObjectHeader.RttiIdx))), unwind)
         val typeptr = let(nir.Op.Load(nir.Type.Ptr, rttiPtr), unwind)
-        // val typeptr = let(nir.Op.Elem(nir.Type.Ptr, typeptrObj, Seq(nir.Val.Int(meta.layouts.ClassRtti.RttiIdx))), unwind)
-        
-        // val c = new CommonMemoryLayouts()
-        // c.ObjectHeader.
-
-        // val commonMemory = new CommonMemoryLayouts()
-
-        // val typeptr = let(nir.Op.Load(nir.Type.Ptr, obj), unwind)
         val methptrptr = let(
           nir.Op.Elem(
             rtti(cls).struct,
@@ -1170,22 +1150,11 @@ private[scalanative] object Lower {
             .indexOf(sig)
             .ensuring(_ >= 0, s"Not found ${sig.show} entry in ${trt.name.id} methods")
         )
-        // val rttiPtr = nir.Op.Elem(
-        //   meta.layouts.ObjectHeader.layout,
-        //   obj,
-        //   Seq(zero, nir.Val.Int(meta.layouts.ObjectHeader.RttiIdx))
-        // )
 
-        // val rtti = let(
-        //   nir.Op.Load(nir.Type.Ptr, rttiPtr),
-        //   unwind
-        // )
-        // println(s"Lowering ${sig.show} via genTraitVirtualLookup")
         val rttiPtr = let(nir.Op.Elem(nir.Type.Ptr, obj, Seq(nir.Val.Int(meta.layouts.ObjectHeader.RttiIdx))), unwind)
         val rtti = let(nir.Op.Load(nir.Type.Ptr, rttiPtr), unwind)
         // val rtti = let(nir.Op.Elem(nir.Type.Ptr, rttiObj, Seq(nir.Val.Int(meta.layouts.ClassRtti.RttiIdx))), unwind)
         
-        // val rtti = let(nir.Op.Load(nir.Type.Ptr, obj), unwind)
         genItableLookup(trt, buf, mayBeNotFound = false)(Some(n), rtti, nir.Type.Ptr)(
           genFastPath = (buf, traitId, itableSize, resultLabel) => {
             val itablesPtr = let(nir.Op.Elem(ClassRtti.layout, rtti, ClassRttiItablesPath), unwind)

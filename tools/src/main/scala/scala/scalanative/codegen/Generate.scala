@@ -2,11 +2,12 @@ package scala.scalanative
 package codegen
 
 import scala.collection.mutable
-
 import scala.scalanative.build.Logger
-import scala.scalanative.linker.{
-  Class, Field, ReachabilityAnalysis, ScopeInfo, Unavailable
-}
+import scala.scalanative.linker.Class
+import scala.scalanative.linker.Field
+import scala.scalanative.linker.ReachabilityAnalysis
+import scala.scalanative.linker.ScopeInfo
+import scala.scalanative.linker.Unavailable
 
 // scalafmt: { maxColumn = 120}
 private[codegen] object Generate {
@@ -225,10 +226,17 @@ private[codegen] object Generate {
           val alloc = nir.Val.Local(fresh(), clsTy)
 
           if (cls.isConstantModule) {
+            val pyRefCnt = nir.Val.Size(1)
+            val pyRtti = nir.Val.Null
+
             val moduleTyName = name.member(nir.Sig.Generated("type"))
             val moduleTyVal = nir.Val.Global(moduleTyName, nir.Type.Ptr)
             val instanceName = name.member(nir.Sig.Generated("instance"))
-            val instanceVal = nir.Val.StructValue(moduleTyVal :: meta.lockWordVals)
+            val instanceVal = nir.Val.StructValue(
+              pyRefCnt ::
+              pyRtti ::
+              moduleTyVal :: meta.lockWordVals
+            )
             // Needs to be defined as var, const does not allow to modify lock-word field
             val instanceDefn = nir.Defn.Var(
               nir.Attrs.None,
