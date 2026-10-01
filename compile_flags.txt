@@ -12,6 +12,7 @@
 -Inativelib/src/main/resources/scala-native/gc/
 -DSCALANATIVE_MULTITHREADING_ENABLED
 -DSCALANATIVE_DYLIB
+-DSCALANATIVE_PYTHONABI
 # uncomment as needed for CPP exceptions
 #-DSCALANATIVE_USING_CPP_EXCEPTIONS
 
@@ -20,6 +21,7 @@
 
 # libunwind
 -Inativelib/src/main/resources/scala-native/platform/posix/libunwind
+-I/usr/include/python3.14
 -DNDEBUG
 
 # defines for the garbage collectors which are used for GC selection
@@ -27,6 +29,7 @@
 -DSCALANATIVE_GC_IMMIX
 -DSCALANATIVE_GC_COMMIX
 -DSCALANATIVE_GC_NONE
+-DSCALANATIVE_GC_PYTHON
 -DSCALANATIVE_GC_EXPERIMENTAL
 
 # gc debug defines

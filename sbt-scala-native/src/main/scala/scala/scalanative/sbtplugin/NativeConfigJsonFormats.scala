@@ -1,16 +1,24 @@
 package scala.scalanative
 package sbtplugin
 
-import java.nio.file.{Path, Paths}
+import sjsonnew.BasicJsonProtocol.BooleanJsonFormat
+import sjsonnew.BasicJsonProtocol.DoubleJsonFormat
+import sjsonnew.BasicJsonProtocol.FloatJsonFormat
+import sjsonnew.BasicJsonProtocol.IntJsonFormat
+import sjsonnew.BasicJsonProtocol.LongJsonFormat
+import sjsonnew.BasicJsonProtocol.StringJsonFormat
+import sjsonnew.BasicJsonProtocol.optionFormat
+import sjsonnew.BasicJsonProtocol.seqFormat
+import sjsonnew.BasicJsonProtocol.vectorFormat
+import sjsonnew.Builder
+import sjsonnew.JsonFormat
+import sjsonnew.Unbuilder
+import sjsonnew.deserializationError
 
+import java.nio.file.Path
+import java.nio.file.Paths
 import scala.scalanative.build.*
 import scala.scalanative.nir
-
-import sjsonnew.BasicJsonProtocol.{
-  BooleanJsonFormat, DoubleJsonFormat, FloatJsonFormat, IntJsonFormat,
-  LongJsonFormat, StringJsonFormat, optionFormat, seqFormat, vectorFormat
-}
-import sjsonnew.{Builder, JsonFormat, Unbuilder, deserializationError}
 
 /** sbt 2.x caches task outputs and requires a [[sjsonnew.JsonFormat]] for the
  *  result type. [[NativeConfig]] is encoded structurally: one [[JsonFormat]]
@@ -109,8 +117,9 @@ object NativeConfigJsonFormats {
       final val Boehm = "boehm"
       final val Immix = "immix"
       final val Commix = "commix"
+      final val Python = "python"
       final val Experimental = "experimental"
-      val all: Set[String] = Set(None, Boehm, Immix, Commix, Experimental)
+      val all: Set[String] = Set(None, Boehm, Immix, Commix, Python, Experimental)
     }
 
     def toJson(value: GC): String =
@@ -119,6 +128,7 @@ object NativeConfigJsonFormats {
         case GC.Boehm        => Values.Boehm
         case GC.Immix        => Values.Immix
         case GC.Commix       => Values.Commix
+        case GC.Python       => Values.Python
         case GC.Experimental => Values.Experimental
       }
 
@@ -128,6 +138,7 @@ object NativeConfigJsonFormats {
         case Values.Boehm        => GC.boehm
         case Values.Immix        => GC.immix
         case Values.Commix       => GC.commix
+        case Values.Python       => GC.python
         case Values.Experimental => GC.experimental
         case other               => DeserializationError(other, Values.all)
       }

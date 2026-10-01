@@ -41,6 +41,7 @@ object GC {
   private[scalanative] case object Boehm extends GC("boehm", Seq("gc"))
   private[scalanative] case object Immix extends GC("immix", Seq.empty)
   private[scalanative] case object Commix extends GC("commix", Seq.empty)
+  private[scalanative] case object Python extends GC("python", Seq.empty)
   private[scalanative] case object Experimental
       extends GC("experimental", Seq.empty)
 
@@ -55,6 +56,9 @@ object GC {
 
   /** Mostly-precise mark-region garbage collector running concurrently. */
   def commix: GC = Commix
+
+  /** Python allocator and garbage collector. */
+  def python: GC = Python
 
   /** The default garbage collector. */
   def default: GC = Immix
@@ -72,11 +76,13 @@ object GC {
       immix
     case "commix" =>
       commix
+    case "python" =>
+      python
     case "experimental" =>
       experimental
     case value =>
       throw new IllegalArgumentException(
-        "GC can be either \"none\", \"boehm\", \"immix\", \"commix\" or \"experimental\", not: " + value
+        "GC can be either \"none\", \"boehm\", \"immix\", \"commix\", \"python\" or \"experimental\", not: " + value
       )
   }
 }

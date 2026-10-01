@@ -1,4 +1,4 @@
-#if defined(SCALANATIVE_GC_NONE)
+#if defined(SCALANATIVE_GC_PYTHON)
 
 // sscanf and getEnv is deprecated in WinCRT, disable warnings
 // These functions are not used directly, but are included in
@@ -7,6 +7,7 @@
 // Windows runtime it might happen while preprocessing some of stdlib headers.
 #define _CRT_SECURE_NO_WARNINGS
 
+#include <Python.h>
 #include <stdlib.h>
 #include <stdio.h>
 #include "shared/MemoryMap.h"
@@ -123,24 +124,24 @@ void scalanative_GC_init() {
 }
 
 void *scalanative_GC_alloc(Rtti *info, size_t size) {
-    size = size + (8 - size % 8);
-#ifndef GC_ASAN
-    if (current + size < end) {
-        Object *alloc = (Object *)current;
-        alloc->rtti = info;
-        current += size;
-        TOTAL_ALLOCATED += size;
-        return alloc;
-    } else {
-        scalanative_GC_init();
-        return scalanative_GC_alloc(info, size);
+    size = (size + 7) & ~((size_t)7); // alignment
+
+    // safety check that will be removed afterwards
+    if(size >= 100000) {
+        fprintf(stderr,
+            "[WARN] Tried to allocate %zu bytes\n",
+            size);
+        return (void*)0;
     }
-#else
-    Object *alloc = (Object *)calloc(size, 1);
+    
+    Object *alloc = (Object *) PyObject_Calloc(1, size);
+
+    Py_SET_REFCNT(alloc, 1);
+    Py_SET_TYPE(&alloc->py, NULL);
+
     alloc->rtti = info;
     TOTAL_ALLOCATED += size;
     return alloc;
-#endif
 }
 
 void *scalanative_GC_alloc_small(Rtti *info, size_t size) {

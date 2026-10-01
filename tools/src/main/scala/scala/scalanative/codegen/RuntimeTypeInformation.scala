@@ -85,8 +85,7 @@ private[codegen] class RuntimeTypeInformation(info: ScopeInfo)(implicit
     )
 
     val base = nir.Val.StructValue(
-      pyRefCnt ::
-      pyRtti ::
+      meta.pythonHeaderVals.toList :::
       classConst :: meta.lockWordVals :::
         typeId ::
         interfacesCount ::

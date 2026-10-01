@@ -1,6 +1,6 @@
 package scala.scalanative.meta
 
-import scala.scalanative.unsafe._
+import scala.scalanative.unsafe.*
 
 /** Constants resolved at link-time from NativeConfig, can be conditionally
  *  discard some parts of NIR instructions when linking
@@ -61,6 +61,11 @@ object LinktimeInfo {
   )
   def isMultithreadingEnabled: Boolean = resolved
 
+  @resolvedAtLinktime(
+    "scala.scalanative.meta.linktimeinfo.isPythonABIEnabled"
+  )
+  def isPythonABIEnabled: Boolean = resolved
+
   // Referenced in nscplugin and codegen
   @resolvedAtLinktime(
     "scala.scalanative.meta.linktimeinfo.contendedPaddingWidth"
@@ -80,6 +85,7 @@ object LinktimeInfo {
     @resolvedAtLinktime def isBoehm: Boolean = garbageCollector == "boehm"
     @resolvedAtLinktime def isImmix: Boolean = garbageCollector == "immix"
     @resolvedAtLinktime def isCommix: Boolean = garbageCollector == "commix"
+    @resolvedAtLinktime def isPython: Boolean = garbageCollector == "python"
     @resolvedAtLinktime def isNone: Boolean = garbageCollector == "none"
   }
 

@@ -1,7 +1,8 @@
 package scala.scalanative
 package build
 
-import java.nio.file.{Path, Paths}
+import java.nio.file.Path
+import java.nio.file.Paths
 
 /** An object describing how to configure the Scala Native toolchain. */
 sealed trait NativeConfig {
@@ -109,6 +110,8 @@ sealed trait NativeConfig {
    */
   private[scalanative] def multithreadingSupport: Boolean =
     multithreading.getOrElse(true)
+
+  def pythonAbi: Boolean
 
   /** Map of user defined properties resolved at linktime */
   def linktimeProperties: NativeConfig.LinktimeProperites
@@ -270,6 +273,8 @@ sealed trait NativeConfig {
   /** Create a new config with support for multithreading */
   def withMultithreading(defined: Option[Boolean]): NativeConfig
 
+  def withPythonABI(enabled: Boolean): NativeConfig
+
   /** Create a new config with given linktime properites */
   final def withLinktimeProperties(
       value: NativeConfig.LinktimeProperites
@@ -348,6 +353,7 @@ object NativeConfig {
       optimize = true,
       useIncrementalCompilation = true,
       multithreading = None, // detect
+      pythonAbi = false,
       linktimeProperties = Map.empty,
       embedResources = false,
       resourceIncludePatterns = Seq("**"),
@@ -380,6 +386,7 @@ object NativeConfig {
       optimize: Boolean,
       useIncrementalCompilation: Boolean,
       multithreading: Option[Boolean],
+      pythonAbi: Boolean,
       linktimeProperties: LinktimeProperites,
       embedResources: Boolean,
       resourceIncludePatterns: Seq[String],
@@ -388,7 +395,7 @@ object NativeConfig {
       baseName: String,
       optimizerConfig: OptimizerConfig,
       sourceLevelDebuggingConfig: SourceLevelDebuggingConfig,
-      semanticsConfig: SemanticsConfig
+      semanticsConfig: SemanticsConfig,
   ) extends NativeConfig {
 
     def withClang(value: Path): NativeConfig =
@@ -460,6 +467,9 @@ object NativeConfig {
 
     def withMultithreading(enabled: Boolean): NativeConfig =
       copy(multithreading = Some(enabled))
+
+    def withPythonABI(enabled: Boolean): NativeConfig =
+      copy(pythonAbi = enabled)
 
     def withMultithreading(defined: Option[Boolean]): NativeConfig =
       copy(multithreading = defined)

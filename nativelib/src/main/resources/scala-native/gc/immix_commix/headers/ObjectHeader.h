@@ -1,7 +1,6 @@
 #ifndef IMMIX_OBJECTHEADER_H
 #define IMMIX_OBJECTHEADER_H
 
-#include <Python.h>
 #include <stdint.h>
 #include <stdbool.h>
 #include <stddef.h>
@@ -13,6 +12,11 @@
 #include "shared/GCTypes.h"
 #include "limits.h"
 #include "assert.h"
+
+#ifdef SCALANATIVE_PYTHONABI
+#include <Python.h>
+#define USES_PYTHONABI 1
+#endif
 
 extern const int __object_array_id;
 extern const int __blob_array_id;
@@ -41,7 +45,9 @@ typedef struct ITableEntry {
 
 typedef struct Rtti {
     // Fields shared by all classes
+#ifdef USES_PYTHONABI
     PyObject py;
+#endif
     struct BaseRtti {
         word_t *cls;
 #ifdef USES_LOCKWORD
@@ -65,7 +71,9 @@ typedef struct Rtti {
 typedef word_t *Field_t;
 
 typedef struct {
+#ifdef USES_PYTHONABI
     PyObject py;
+#endif
     Rtti *rtti;
 #ifdef USES_LOCKWORD
     word_t *lockWord;
@@ -74,7 +82,9 @@ typedef struct {
 } Object;
 
 typedef struct {
+#ifdef USES_PYTHONABI
     PyObject py;
+#endif
     Rtti *rtti;
 #ifdef USES_LOCKWORD
     word_t *lockWord;
@@ -90,7 +100,9 @@ typedef struct {
 
 typedef struct StringObject {
     // ObjectHeader
+#ifdef USES_PYTHONABI
     PyObject py;
+#endif
     Rtti *rtti;
 #ifdef USES_LOCKWORD
     word_t *lockWord;

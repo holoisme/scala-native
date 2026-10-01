@@ -233,9 +233,7 @@ private[codegen] object Generate {
             val moduleTyVal = nir.Val.Global(moduleTyName, nir.Type.Ptr)
             val instanceName = name.member(nir.Sig.Generated("instance"))
             val instanceVal = nir.Val.StructValue(
-              pyRefCnt ::
-              pyRtti ::
-              moduleTyVal :: meta.lockWordVals
+              meta.pythonHeaderVals.toList ::: moduleTyVal :: meta.lockWordVals
             )
             // Needs to be defined as var, const does not allow to modify lock-word field
             val instanceDefn = nir.Defn.Var(

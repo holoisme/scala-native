@@ -2,8 +2,7 @@ package scala.scalanative
 package linker
 
 import scala.collection.mutable
-
-import scala.scalanative.build._
+import scala.scalanative.build.*
 import scala.scalanative.util.unsupported
 
 private[linker] trait LinktimeValueResolver { self: Reach =>
@@ -24,6 +23,7 @@ private[linker] trait LinktimeValueResolver { self: Reach =>
       s"$linktimeInfo.debugMode" -> (conf.mode == Mode.debug),
       s"$linktimeInfo.releaseMode" -> (conf.mode == Mode.releaseFast || conf.mode == Mode.releaseFull || conf.mode == Mode.releaseSize),
       s"$linktimeInfo.isMultithreadingEnabled" -> conf.multithreadingSupport,
+      s"$linktimeInfo.isPythonABIEnabled" -> conf.pythonAbi,
       s"$linktimeInfo.isWeakReferenceSupported" -> {
         conf.gc == GC.Immix ||
         conf.gc == GC.Commix ||

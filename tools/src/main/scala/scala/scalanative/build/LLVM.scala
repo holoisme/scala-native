@@ -98,9 +98,13 @@ private[scalanative] object LLVM {
         if (config.usingCppExceptions)
           Seq("-DSCALANATIVE_USING_CPP_EXCEPTIONS")
         else Nil
+      val pythonAbiEnabled =
+        if (config.compilerConfig.pythonAbi)
+          Seq("-DSCALANATIVE_PYTHONABI")
+        else Nil
       val allowTargetOverrrides =
         config.compilerConfig.targetTriple.map(_ => s"-Wno-override-module")
-      multithreadingEnabled ++ usingCppExceptions ++ allowTargetOverrrides
+      multithreadingEnabled ++ usingCppExceptions ++ pythonAbiEnabled ++ allowTargetOverrrides
     }
     // Always generate debug metadata on Windows, it's required for stack traces to work
     val debugFlags =

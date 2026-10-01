@@ -1,5 +1,5 @@
 #if defined(SCALANATIVE_GC_IMMIX) || defined(SCALANATIVE_GC_COMMIX) ||         \
-    defined(SCALANATIVE_GC_NONE) || defined(SCALANATIVE_GC_EXPERIMENTAL)
+    defined(SCALANATIVE_GC_NONE) || defined(SCALANATIVE_GC_EXPERIMENTAL) || defined(SCALANATIVE_GC_PYTHON)
 
 // Disable MSVC deprecation warnings for standard C functions
 #ifdef _WIN32

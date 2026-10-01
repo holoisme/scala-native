@@ -2036,8 +2036,7 @@ private[scalanative] object Lower {
       val charsLength = nir.Val.Int(chars.length)
       val charsConst = nir.Val.Const(
         nir.Val.StructValue(
-          nir.Val.Size(1) :: // py ref count
-          nir.Val.Null :: // py rtti
+          meta.pythonHeaderVals.toList :::
           rtti(CharArrayCls).const ::
             meta.lockWordVals :::
             charsLength ::
@@ -2064,8 +2063,7 @@ private[scalanative] object Lower {
 
       nir.Val.Const(
         nir.Val.StructValue(
-          nir.Val.Size(1) :: // py ref count
-          nir.Val.Null :: // py rtti
+          meta.pythonHeaderVals.toList :::
           rtti(StringCls).const ::
             meta.lockWordVals ++
             fieldValues
