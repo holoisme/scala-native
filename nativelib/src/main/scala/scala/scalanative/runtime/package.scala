@@ -1,15 +1,16 @@
 package scala.scalanative
 
+import java.lang as jl
 import java.util.concurrent.locks.LockSupport
-import java.{lang => jl}
-
 import scala.scalanative.meta.LinktimeInfo.isMultithreadingEnabled
+
 import scalanative.annotation.alwaysinline
-import scalanative.runtime.Intrinsics._
-import scalanative.runtime.ffi.stdatomic.{atomic_thread_fence, memory_order}
-import scalanative.runtime.monitor._
-import scalanative.unsafe._
+import scalanative.runtime.Intrinsics.*
+import scalanative.unsafe.*
 import scalanative.unsigned.USize
+import scalanative.runtime.ffi.stdatomic.atomic_thread_fence
+import scalanative.runtime.ffi.stdatomic.memory_order
+import scalanative.runtime.monitor.*
 
 package object runtime {
   def filename = ExecInfo.filename
@@ -294,6 +295,12 @@ package object runtime {
       cls.wait()
     }
     ??? // Unreachable
+  }
+
+  @noinline
+  @exported("scalanative_objectToString")
+  def objectToString(obj: Object): String = {
+    obj.toString
   }
 
   @extern private[runtime] object StackOverflowGuards {

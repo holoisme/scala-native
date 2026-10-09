@@ -65,6 +65,8 @@ private[codegen] class RuntimeTypeInformation(info: ScopeInfo)(implicit
 
   val name: nir.Global.Member = info.name.member(nir.Sig.Generated("type"))
   val const: nir.Val.Global = nir.Val.Global(name, nir.Type.Ptr)
+  val pyname: nir.Global.Member = info.name.member(nir.Sig.Generated("pytype"))
+  val pyconst: nir.Val.Global = nir.Val.Global(name, nir.Type.Ptr)
   val struct: nir.Type.StructValue = info match {
     case cls: Class =>
       meta.layouts.ClassRtti
@@ -72,8 +74,6 @@ private[codegen] class RuntimeTypeInformation(info: ScopeInfo)(implicit
     case _ => meta.layouts.Rtti.layout
   }
   lazy val value: nir.Val.StructValue = {
-    val pyRefCnt = nir.Val.Size(1)
-    val pyRtti = nir.Val.Null
     val typeId = nir.Val.Int(meta.ids(info))
     val typeStr = nir.Val.String(typeName)
     val traits = info.linearized
@@ -84,8 +84,10 @@ private[codegen] class RuntimeTypeInformation(info: ScopeInfo)(implicit
       nir.Val.ArrayValue(nir.Type.Ptr, traits.map(meta.rtti(_).const))
     )
 
+    val pyTypeCache = if(meta.usesPythonAbi) Some(nir.Val.Null) else None
+
     val base = nir.Val.StructValue(
-      meta.pythonHeaderVals.toList :::
+      meta.defaultPythonHeaderVals.toList :::
       classConst :: meta.lockWordVals :::
         typeId ::
         interfacesCount ::
@@ -116,6 +118,7 @@ private[codegen] class RuntimeTypeInformation(info: ScopeInfo)(implicit
             nir.Val.Int(itablesSize) ::
             itable.const ::
             superClass ::
+            pyTypeCache.toList :::
             dynmap :::
             meta.vtable(cls).value ::
             Nil

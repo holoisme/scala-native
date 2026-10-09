@@ -1,9 +1,9 @@
 package scala.scalanative.runtime
 
-import java.nio.charset.{Charset, StandardCharsets}
-
+import java.nio.charset.Charset
+import java.nio.charset.StandardCharsets
 import scala.scalanative.meta.LinktimeInfo
-import scala.scalanative.unsafe._
+import scala.scalanative.unsafe.*
 
 abstract class Throwable @noinline protected (
     writableStackTrace: scala.Boolean
@@ -130,6 +130,19 @@ abstract class Throwable @noinline protected (
       }
     }
   }
+
+  // @name("scalanative_Throwable_throwPyErr")
+  // def throwPyErr(self: Throwable) = extern
+}
+
+// @noinline
+// @name("scalanative_bubbleExceptionToPython")
+// def bubbleExceptionToPython(e: Throwable): CInt = extern
+
+@extern
+object BubbleThrowable {
+  @name("scalanative_bubbleExceptionToPython")
+  def bubbleExceptionToPython(e: Throwable): CInt = extern
 }
 
 private object Throwable {

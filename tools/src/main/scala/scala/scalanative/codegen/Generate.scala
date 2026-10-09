@@ -30,6 +30,10 @@ private[codegen] object Generate {
     def generate(): Seq[nir.Defn] = {
       genDefnsExcludingGenerated()
       genInjects()
+      if(meta.usesPythonAbi) {
+          genPythonRttiDecl()
+      }
+
       entry.fold(genLibraryInit())(genMain(_))
       genClassMetadata()
       genTraitMetadata()
@@ -40,7 +44,43 @@ private[codegen] object Generate {
       genWeakRefUtils()
       genArrayIds()
 
+
       buf.toSeq
+    }
+
+//     private val StringClass = nir.Global.Top("java.lang.String")
+//
+//     private def stringRtti: nir.Val.Global = {
+//         val cls = reachabilityAnalysis.infos(StringClass).asInstanceOf[Class]
+//
+//         meta.rtti(cls).const
+//     }
+
+    private def collectStringLiterals(): Seq[nir.Val.String] = {
+      val strings = mutable.LinkedHashSet.empty[String]
+
+      val traverse = new nir.Traverse {
+        override def onVal(value: nir.Val): Unit =
+          value match {
+            case s: nir.Val.String =>
+              strings += s.value
+            case _ =>
+          }
+      }
+
+      // All strings already present in the reachable input NIR.
+      traverse.onDefns(defns)
+
+      // Strings synthesized while generating Scala RTTI.
+      meta.classes.foreach { cls =>
+        traverse.onVal(meta.rtti(cls).value)
+      }
+
+      meta.traits.foreach { trt =>
+        traverse.onVal(meta.rtti(trt).value)
+      }
+
+      strings.toSeq.map(nir.Val.String.apply)
     }
 
     def genDefnsExcludingGenerated(): Unit = {
@@ -50,6 +90,65 @@ private[codegen] object Generate {
     def genInjects(): Unit = {
       buf += InitDecl
       buf ++= Lower.injects
+    }
+
+    private def genPythonRttiDecl(): Unit =
+      buf += nir.Defn.Declare(
+        nir.Attrs.None.withIsExtern(true),
+        PySetTypeName,
+        PySetTypeSig
+      )
+
+    private def constantModules: Seq[Class] =
+      meta.classes.filter { cls =>
+        cls.isModule &&
+        cls.allocated &&
+        cls.isConstantModule
+      }
+
+    private def genPythonRttiInit()(implicit fresh: nir.Fresh): Seq[nir.Inst] = {
+      if (!meta.usesPythonAbi) {
+          return Seq()
+      }
+
+      val stringCalls =
+        collectStringLiterals().map { stringValue =>
+          nir.Inst.Let(
+            nir.Op.Call(
+              PySetTypeSig,
+              PySetType,
+              Seq(
+                stringValue,
+              )
+            ),
+            nir.Next.None
+          )
+        }
+
+      val moduleCalls =
+        constantModules.map { cls =>
+          val instance =
+            nir.Val.Global(
+              cls.name.member(nir.Sig.Generated("instance")),
+              nir.Type.Ptr
+            )
+
+          val rtti = meta.rtti(cls).const
+
+          nir.Inst.Let(
+            nir.Op.Call(
+              PySetTypeSig,
+              PySetType,
+              Seq(
+                instance,
+                rtti
+              )
+            ),
+            nir.Next.None
+          )
+        }
+
+      stringCalls ++ moduleCalls
     }
 
     def genClassMetadata(): Unit = {
@@ -136,6 +235,18 @@ private[codegen] object Generate {
       )
     }
 
+//     private def genPyInit(unwindProvider: () => nir.Next)(implicit fresh: nir.Fresh) = {
+//       if (!meta.usesPythonAbi) {
+//         Seq()
+//       } else {
+//         def unwind: nir.Next = unwindProvider()
+//
+//         Seq(
+//             nir.Inst.Let(nir.Op.Call(PyInitSig, PyInit, Seq.empty), unwind)
+//         )
+//       }
+//     }
+
     /* Injects definition of library initializers that needs to be called, when using Scala Native as shared library.
      * Injects basic handling of exceptions, prints stack trace and returns non-zero value on exception or 0 otherwise */
     def genLibraryInit(): Unit = {
@@ -148,7 +259,8 @@ private[codegen] object Generate {
         withExceptionHandler { unwindProvider =>
           Seq(nir.Inst.Label(fresh(), Nil)) ++
             genGcInit(unwindProvider) ++
-            genClassInitializersCalls(unwindProvider)
+            genClassInitializersCalls(unwindProvider) ++
+            genPythonRttiInit() // introduce here python rtti initializer
         }
       )
     }
@@ -233,7 +345,7 @@ private[codegen] object Generate {
             val moduleTyVal = nir.Val.Global(moduleTyName, nir.Type.Ptr)
             val instanceName = name.member(nir.Sig.Generated("instance"))
             val instanceVal = nir.Val.StructValue(
-              meta.pythonHeaderVals.toList ::: moduleTyVal :: meta.lockWordVals
+              meta.defaultPythonHeaderVals.toList ::: moduleTyVal :: meta.lockWordVals
             )
             // Needs to be defined as var, const does not allow to modify lock-word field
             val instanceDefn = nir.Defn.Var(
@@ -535,6 +647,16 @@ private[codegen] object Generate {
     val InitSig = nir.Type.Function(Seq.empty, nir.Type.Unit)
     val InitDecl = nir.Defn.Declare(nir.Attrs.None, extern("scalanative_GC_init"), InitSig)
     val Init = nir.Val.Global(InitDecl.name, nir.Type.Ptr)
+
+    val PyInitSig = nir.Type.Function(Seq.empty, nir.Type.Unit)
+    val PyInitDecl = nir.Defn.Declare(nir.Attrs.None, extern("scalanative_Py_init"), PyInitSig)
+    val PyInit = nir.Val.Global(PyInitDecl.name, nir.Type.Ptr)
+
+    // val PySetTypeSig = nir.Type.Function(Seq(nir.Type.Ptr, nir.Type.Ptr), nir.Type.Int)
+    val PySetTypeSig = nir.Type.Function(Seq(nir.Type.Ptr), nir.Type.Int)
+    val PySetTypeName = extern("scalanative_InitPySetType")
+    val PySetTypeDecl = nir.Defn.Declare(nir.Attrs.None, PySetTypeName, PySetTypeSig)
+    val PySetType = nir.Val.Global(PySetTypeDecl.name, nir.Type.Ptr)
 
     val moduleArrayName = extern("__modules")
     val moduleArraySizeName = extern("__modules_size")

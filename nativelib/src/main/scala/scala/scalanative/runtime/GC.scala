@@ -2,7 +2,8 @@ package scala.scalanative
 package runtime
 
 import scala.scalanative.annotation.alwaysinline
-import scalanative.unsafe._
+
+import scalanative.unsafe.*
 
 /** The Boehm GC conservative garbage collector
  *
@@ -65,6 +66,9 @@ object GC {
   private type PtrAny = CVoidPtr
   type ThreadRoutineArg = PtrAny
   type ThreadStartRoutine = CFuncPtr1[ThreadRoutineArg, PtrAny]
+
+//   @name("scalanative_bubbleExceptionToPython")
+//   def bubbleExceptionToPython(e: Throwable): CInt = extern
 
   /** Proxy to pthread_create which registers created thread in the GC */
   @name("scalanative_GC_pthread_create")

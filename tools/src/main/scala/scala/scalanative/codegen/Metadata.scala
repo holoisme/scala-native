@@ -1,11 +1,11 @@
 package scala.scalanative
 package codegen
 
+import scala.collection.mutable
+
 import scalanative.linker.Class
 import scalanative.linker.ReachabilityAnalysis
 import scalanative.linker.Trait
-
-import scala.collection.mutable
 
 private[scalanative] class Metadata(
     val analysis: ReachabilityAnalysis.Result,
@@ -22,7 +22,8 @@ private[scalanative] class Metadata(
   private[codegen] val lockWordVals = lockWordType.map(_ => nir.Val.Null).toList
 
   val pythonHeaderType: Seq[nir.Type] = if (usesPythonAbi) Seq(nir.Type.Size, nir.Type.Ptr) else Seq()
-  private[codegen] val pythonHeaderVals = if (usesPythonAbi) Seq(nir.Val.Size(1), nir.Val.Null) else Seq()
+  private[codegen] def pythonHeaderVals(rc: Long, rtti: nir.Val) = if (usesPythonAbi) Seq(nir.Val.Size(rc), rtti) else Seq()
+  private[codegen] val defaultPythonHeaderVals = pythonHeaderVals(1, nir.Val.Null) // if (usesPythonAbi) Seq(nir.Val.Size(1), nir.Val.Null) else Seq()
 
   val layouts = new CommonMemoryLayouts()
   val rtti = mutable.Map.empty[linker.Info, RuntimeTypeInformation]

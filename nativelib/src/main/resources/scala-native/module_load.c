@@ -83,8 +83,14 @@ NOINLINE static ModuleRef __scalanative_startAndWaitForModuleInitialization(
     ModuleSlot slot, void *classInfo, size_t size, ModuleCtor ctor) {
     InitializationContext ctx = {};
     void **expected = NULL;
+
+    // here maybe generate the python type?
+    // Rtti* rt = (Rtti*) classInfo;
+    // char* name = Rtti_name(rt);
+    // printf("Initializing module: %s\n", name);
+    // free(name);
+
     if (atomic_compare_exchange_strong(slot, &expected, (void **)&ctx)) {
-        // here maybe generate the python type?
         ModuleRef instance = scalanative_GC_alloc(classInfo, size);
         ctx.initThreadId = getThreadId();
         ctx.instance = instance;

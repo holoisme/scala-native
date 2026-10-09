@@ -66,6 +66,10 @@ typedef struct Rtti {
     int32_t itableCount;
     ITableEntry *itable; // ITableEntry[itableCount]
     struct Rtti *superclass;
+#ifdef USES_PYTHONABI
+    PyTypeObject* pyType;   // NULL at init, a pytype will be allocated when
+                            // this class is used to allocate an object
+#endif
 } Rtti;
 
 typedef word_t *Field_t;
@@ -174,6 +178,32 @@ static inline Field_t Field_allignedLockRef(const Field_t field) {
     return (Field_t)((word_t)field & MONITOR_OBJECT_MASK);
 }
 #endif
+
+// static uint16_t *stringCharArray(StringObject* string) {
+//     CharArray *strChars = string->value;
+//     int nameLength = strChars->header.length;
+//     char *buf = calloc(nameLength + 1, sizeof(char));
+//     for (int i = 0; i < nameLength; i++) {
+//         buf[i] = (char)strChars->values[i];
+//     }
+//     buf[nameLength] = 0;
+//     return buf;
+// }
+
+static char *asciiStringToCString(StringObject* string) {
+    CharArray *strChars = string->value;
+    int nameLength = strChars->header.length;
+    char *buf = calloc(nameLength + 1, sizeof(char));
+    for (int i = 0; i < nameLength; i++) {
+        buf[i] = (char)strChars->values[i];
+    }
+    buf[nameLength] = 0;
+    return buf;
+}
+
+static char *Rtti_name(Rtti* rtti) {
+    return asciiStringToCString(rtti->rt.name);
+}
 
 /* Returns a wide string containg Class.name of given object based on UTF-8
  * java.lang.String value.

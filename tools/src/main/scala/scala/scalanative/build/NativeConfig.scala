@@ -100,7 +100,7 @@ sealed trait NativeConfig {
    *                  problems.
    *
    *  * 'true'   - Always link with multithreading enabled.
-   * 
+   *
    */
   // format: on
   def multithreading: Option[Boolean]
@@ -469,7 +469,11 @@ object NativeConfig {
       copy(multithreading = Some(enabled))
 
     def withPythonABI(enabled: Boolean): NativeConfig =
-      copy(pythonAbi = enabled)
+      if(enabled) {
+          copy(pythonAbi = true, gc = GC.python, buildTarget = BuildTarget.libraryDynamic)
+      } else {
+          copy(pythonAbi = false)
+      }
 
     def withMultithreading(defined: Option[Boolean]): NativeConfig =
       copy(multithreading = defined)

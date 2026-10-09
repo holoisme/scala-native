@@ -105,6 +105,22 @@ private[scalanative] object Lower {
     private val noSuchMethodSlowPath =
       mutable.Map.empty[Option[nir.Local], nir.Local]
 
+
+//     private val generatedStringVars =
+//       mutable.LinkedHashMap.empty[String, nir.Defn.Var]
+//
+//     private val stringGlobalsOwner =
+//       nir.Global.Top("__scala_native_string_literals")
+
+    private val generatedStringVars =
+      mutable.LinkedHashMap.empty[
+        String,
+        (nir.Defn.Var, nir.Defn.Var)
+      ]
+
+    private val stringGlobalsOwner =
+      nir.Global.Top("__scala_native_string_literals")
+
     private def unwind: nir.Next =
       unwindHandler.get.fold[nir.Next](nir.Next.None) { handler =>
         val exc = nir.Val.Local(fresh(), nir.Rt.Throwable)
@@ -125,6 +141,10 @@ private[scalanative] object Lower {
           buf += onDefn(defn)
       }
 
+      generatedStringVars.valuesIterator.foreach { case (charsVar, stringVar) =>
+          buf += charsVar
+          buf += stringVar
+        }
       buf.toSeq
     }
 
@@ -325,9 +345,9 @@ private[scalanative] object Lower {
           logger.synchronized {
             logger.error(
               s"""|Dead code elimnation failed: ${error.getMessage()}
-                  |Original defn: 
+                  |Original defn:
                   |${currentDefn.get.show}
-                  |Lowered instructions: 
+                  |Lowered instructions:
                   |${loweredInsts.zipWithIndex.map { case (inst, idx) => s"${idx.toString().padTo(4, ' ')}| ${inst.show}" }.mkString("\n")}
                   |""".stripMargin
             )
@@ -1154,7 +1174,7 @@ private[scalanative] object Lower {
         val rttiPtr = let(nir.Op.Elem(nir.Type.Ptr, obj, Seq(nir.Val.Int(meta.layouts.ObjectHeader.RttiIdx))), unwind)
         val rtti = let(nir.Op.Load(nir.Type.Ptr, rttiPtr), unwind)
         // val rtti = let(nir.Op.Elem(nir.Type.Ptr, rttiObj, Seq(nir.Val.Int(meta.layouts.ClassRtti.RttiIdx))), unwind)
-        
+
         genItableLookup(trt, buf, mayBeNotFound = false)(Some(n), rtti, nir.Type.Ptr)(
           genFastPath = (buf, traitId, itableSize, resultLabel) => {
             val itablesPtr = let(nir.Op.Elem(ClassRtti.layout, rtti, ClassRttiItablesPath), unwind)
@@ -1276,7 +1296,7 @@ private[scalanative] object Lower {
         val rttiPtr = let(nir.Op.Elem(nir.Type.Ptr, obj, Seq(nir.Val.Int(meta.layouts.ObjectHeader.RttiIdx))), unwind)
         val typeptr = let(nir.Op.Load(nir.Type.Ptr, rttiPtr), unwind)
         // val typeptr = let(nir.Op.Elem(nir.Type.Ptr, typeptrObj, Seq(nir.Val.Int(meta.layouts.ClassRtti.RttiIdx))), unwind)
-        
+
         // println(s"Lowering ${obj.show} reflective thing via genReflectiveLookup")
 
         // Load the dynamic hash map for given type, make sure it's not null
@@ -1352,7 +1372,7 @@ private[scalanative] object Lower {
           val rttiPtr = let(nir.Op.Elem(nir.Type.Ptr, obj, Seq(nir.Val.Int(meta.layouts.ObjectHeader.RttiIdx))), unwind)
           val typeptr = let(nir.Op.Load(nir.Type.Ptr, rttiPtr), unwind)
           // val typeptr = let(nir.Op.Elem(nir.Type.Ptr, typeptrObj, Seq(nir.Val.Int(meta.layouts.ClassRtti.RttiIdx))), unwind)
-          
+
           // println(s"Lowering ${obj.show} class is ${cls.name.show} thing via genIsOp [ClassRef 1]")
           let(nir.Op.Comp(nir.Comp.Ieq, nir.Type.Ptr, typeptr, rtti(cls).const), unwind)
 
@@ -1362,7 +1382,7 @@ private[scalanative] object Lower {
           val rttiPtr = let(nir.Op.Elem(nir.Type.Ptr, obj, Seq(nir.Val.Int(meta.layouts.ObjectHeader.RttiIdx))), unwind)
           val typeptrObj = let(nir.Op.Load(nir.Type.Ptr, rttiPtr), unwind)
           val typeptr = let(nir.Op.Elem(nir.Type.Ptr, typeptrObj, Seq(nir.Val.Int(meta.layouts.ClassRtti.RttiIdx))), unwind)
-          
+
           // println(s"Lowering ${obj.show} class is ${cls.name.show} thing via genIsOp [ClassRef 2]")
           // val typeptr = let(nir.Op.Load(nir.Type.Ptr, obj), unwind)
           val idptr = let(nir.Op.Elem(Rtti.layout, typeptr, RttiClassIdPath), unwind)
@@ -1396,7 +1416,7 @@ private[scalanative] object Lower {
           val rtti = let(nir.Op.Load(nir.Type.Ptr, rttiPtr), unwind)
 
           // val rtti = let(nir.Op.Elem(nir.Type.Ptr, rttiObj, Seq(nir.Val.Int(meta.layouts.ClassRtti.RttiIdx))), unwind)
-          
+
           // println(s"Lowering ${obj.show} class is ${trt.name.show} thing via genIsOp [TraitRef]")
 
           genItableLookup(trt, buf, mayBeNotFound = true)(None, rtti, nir.Type.Bool)(
@@ -2028,47 +2048,276 @@ private[scalanative] object Lower {
       }
     }
 
+    // def constOrIdentity(v: nir.Val): nir.Val =
+    //   if (meta.usesPythonAbi) nir.Val.Global(nir., v)
+    //   else nir.Val.Const(v)
+
+//     def genStringVal(value: String): nir.Val = {
+//       generatedStringVars.get(value) match {
+//         case Some(stringVar) =>
+//           nir.Val.Global(stringVar.name, nir.Type.Ptr)
+//
+//         case None =>
+//           val StringCls = ClassRef.unapply(nir.Rt.StringName).get
+//           val CharArrayCls = ClassRef.unapply(CharArrayName).get
+//
+//           val chars = value.toCharArray
+//           val charsLength = nir.Val.Int(chars.length)
+//
+//           /*
+//            * Generate a unique pair of globals for this literal.
+//            *
+//            * The literal itself is kept in the key of generatedStringVars,
+//            * so the same Scala string gets the same global.
+//            */
+//           val suffix =
+//             Integer.toUnsignedString(value.hashCode, 36)
+//
+//           val charsGlobal =
+//             stringGlobalsOwner.member(
+//               nir.Sig.Generated(s"chars_$suffix")
+//             )
+//
+//           val stringGlobal =
+//             stringGlobalsOwner.member(
+//               nir.Sig.Generated(s"string_$suffix")
+//             )
+//
+//           /*
+//            * Mutable CharArray object.
+//            *
+//            * Your modified Object/Array header now begins with:
+//            *
+//            *   Py_ssize_t ob_refcnt
+//            *   PyTypeObject* ob_type
+//            *   Rtti*
+//            *   [lockword]
+//            *
+//            * followed by length, stride, and elements.
+//            *
+//            * ob_refcnt starts at 1.
+//            * ob_type starts NULL and will be filled by ScalaNativeInit.
+//            */
+//           // val charsValue =
+//           //   nir.Val.StructValue(
+//           //     nir.Val.Size(1) ::                 // ob_refcnt
+//           //       nir.Val.Null ::                  // ob_type
+//           //       rtti(CharArrayCls).const ::      // Scala RTTI
+//           //       meta.lockWordVals ++
+//           //       charsLength ::
+//           //       nir.Val.Int(2) ::                // stride
+//           //       nir.Val.ArrayValue(
+//           //         nir.Type.Char,
+//           //         chars.toSeq.map(nir.Val.Char(_))
+//           //       ) :: Nil
+//           //   )
+//
+//           val charsValue =
+//             nir.Val.StructValue(
+//             meta.defaultPythonHeaderVals.toList :::
+//             rtti(CharArrayCls).const ::
+//                 meta.lockWordVals :::
+//                 charsLength ::
+//                 nir.Val.Int(2) :: // stride is used only by GC
+//                 nir.Val.ArrayValue(
+//                 nir.Type.Char,
+//                 chars.toSeq.map(nir.Val.Char(_))
+//                 ) :: Nil
+//             )
+//
+//           val charsVar =
+//             nir.Defn.Var(
+//               nir.Attrs.None,
+//               charsGlobal,
+//               layout(CharArrayCls).struct,
+//               charsValue
+//             )(nir.SourcePosition.NoPosition)
+//
+//           /*
+//            * String object.
+//            *
+//            * value field now points to the mutable CharArray global.
+//            */
+//           val fieldValues = stringFieldNames.map {
+//             case nir.Rt.StringValueName =>
+//               nir.Val.Global(charsGlobal, nir.Type.Ptr)
+//
+//             case nir.Rt.StringOffsetName =>
+//               zero
+//
+//             case nir.Rt.StringCountName =>
+//               charsLength
+//
+//             case nir.Rt.StringCachedHashCodeName =>
+//               nir.Val.Int(stringHashCode(value))
+//
+//             case _ =>
+//               util.unreachable
+//           }
+//
+//           val stringValue =
+//             nir.Val.StructValue(
+//             meta.defaultPythonHeaderVals.toList :::
+//             rtti(StringCls).const ::
+//                 meta.lockWordVals ++
+//                 fieldValues
+//             )
+//
+//           val stringVar =
+//             nir.Defn.Var(
+//               nir.Attrs.None,
+//               stringGlobal,
+//               layout(StringCls).struct,
+//               stringValue
+//             )(nir.SourcePosition.NoPosition)
+//
+//           generatedStringVars += value -> stringVar
+//
+//           /*
+//            * charsVar is also needed in the output, but only once.
+//            * Add it separately to the generated-definition map.
+//            */
+//           generatedStringVars += s"$value\000chars" -> charsVar
+//
+//           nir.Val.Global(stringGlobal, nir.Type.Ptr)
+//       }
+//     }
+//
+    private def stringGlobalId(value: String): String =
+        value.iterator
+            .map(ch => Integer.toHexString(ch.toInt))
+            .mkString("s", "_", "")
+
+//     def genStringVal(value: String): nir.Val = {
+//       val StringCls = ClassRef.unapply(nir.Rt.StringName).get
+//       val CharArrayCls = ClassRef.unapply(CharArrayName).get
+//
+//       // val t = if (meta.usesPythonAbi) identity else nir.Val.Const;
+//
+//       val chars = value.toCharArray
+//       val charsLength = nir.Val.Int(chars.length)
+//       val charsConst = constOrIdentity(
+//         nir.Val.StructValue(
+//           meta.defaultPythonHeaderVals.toList :::
+//           rtti(CharArrayCls).const ::
+//             meta.lockWordVals :::
+//             charsLength ::
+//             nir.Val.Int(2) :: // stride is used only by GC
+//             nir.Val.ArrayValue(
+//               nir.Type.Char,
+//               chars.toSeq.map(nir.Val.Char(_))
+//             ) :: Nil
+//         )
+//       )
+//
+//       val fieldValues = stringFieldNames.map {
+//         case nir.Rt.StringValueName =>
+//           charsConst
+//         case nir.Rt.StringOffsetName =>
+//           zero
+//         case nir.Rt.StringCountName =>
+//           charsLength
+//         case nir.Rt.StringCachedHashCodeName =>
+//           nir.Val.Int(stringHashCode(value))
+//         case _ =>
+//           util.unreachable
+//       }
+//
+//       val stringConst = constOrIdentity(
+//         nir.Val.StructValue(
+//           meta.defaultPythonHeaderVals.toList :::
+//           rtti(StringCls).const ::
+//             meta.lockWordVals ++
+//             fieldValues
+//         )
+//       )
+//
+//       stringConst
+//     }
+
     def genStringVal(value: String): nir.Val = {
-      val StringCls = ClassRef.unapply(nir.Rt.StringName).get
-      val CharArrayCls = ClassRef.unapply(CharArrayName).get
+        generatedStringVars.get(value) match {
+            case Some((_, stringVar)) =>
+                nir.Val.Global(stringVar.name, nir.Type.Ptr)
 
-      val chars = value.toCharArray
-      val charsLength = nir.Val.Int(chars.length)
-      val charsConst = nir.Val.Const(
-        nir.Val.StructValue(
-          meta.pythonHeaderVals.toList :::
-          rtti(CharArrayCls).const ::
-            meta.lockWordVals :::
-            charsLength ::
-            nir.Val.Int(2) :: // stride is used only by GC
-            nir.Val.ArrayValue(
-              nir.Type.Char,
-              chars.toSeq.map(nir.Val.Char(_))
-            ) :: Nil
-        )
-      )
+            case None =>
+                val StringCls = ClassRef.unapply(nir.Rt.StringName).get
+                val CharArrayCls = ClassRef.unapply(CharArrayName).get
 
-      val fieldValues = stringFieldNames.map {
-        case nir.Rt.StringValueName =>
-          charsConst
-        case nir.Rt.StringOffsetName =>
-          zero
-        case nir.Rt.StringCountName =>
-          charsLength
-        case nir.Rt.StringCachedHashCodeName =>
-          nir.Val.Int(stringHashCode(value))
-        case _ =>
-          util.unreachable
-      }
+                val chars = value.toCharArray
+                val charsLength = nir.Val.Int(chars.length)
 
-      nir.Val.Const(
-        nir.Val.StructValue(
-          meta.pythonHeaderVals.toList :::
-          rtti(StringCls).const ::
-            meta.lockWordVals ++
-            fieldValues
-        )
-      )
+                val suffix = stringGlobalId(value)
+
+                val charsGlobal =
+                    stringGlobalsOwner.member(
+                    nir.Sig.Generated(s"chars_$suffix")
+                    )
+
+                val stringGlobal =
+                    stringGlobalsOwner.member(
+                    nir.Sig.Generated(s"string_$suffix")
+                    )
+
+                val charsValue =
+                    nir.Val.StructValue(
+                        meta.defaultPythonHeaderVals.toList :::
+                        rtti(CharArrayCls).const ::
+                        meta.lockWordVals :::
+                        charsLength ::
+                        nir.Val.Int(2) :: // stride is used only by GC
+                        nir.Val.ArrayValue(
+                            nir.Type.Char,
+                            chars.toSeq.map(nir.Val.Char(_))
+                        ) :: Nil
+                    )
+
+                val charsVar =
+                    nir.Defn.Var(
+                        nir.Attrs.None,
+                        charsGlobal,
+                        layout(CharArrayCls).struct,
+                        charsValue
+                    )(nir.SourcePosition.NoPosition)
+
+                val fieldValues = stringFieldNames.map {
+                    case nir.Rt.StringValueName =>
+                    nir.Val.Global(charsGlobal, nir.Type.Ptr)
+
+                    case nir.Rt.StringOffsetName =>
+                    zero
+
+                    case nir.Rt.StringCountName =>
+                    charsLength
+
+                    case nir.Rt.StringCachedHashCodeName =>
+                    nir.Val.Int(stringHashCode(value))
+
+                    case _ =>
+                    util.unreachable
+                }
+
+                val stringValue =
+                    nir.Val.StructValue(
+                        meta.defaultPythonHeaderVals.toList :::
+                        rtti(StringCls).const ::
+                        meta.lockWordVals ++
+                        fieldValues
+                    )
+
+                val stringVar =
+                    nir.Defn.Var(
+                    nir.Attrs.None,
+                    stringGlobal,
+                    layout(StringCls).struct,
+                    stringValue
+                    )(nir.SourcePosition.NoPosition)
+
+                generatedStringVars +=
+                    value -> ((charsVar, stringVar))
+
+                nir.Val.Global(stringGlobal, nir.Type.Ptr)
+        }
     }
 
     private def genThisValueNullGuardIfUsed(
@@ -2197,6 +2446,9 @@ private[scalanative] object Lower {
 
   val largeAllocName = extern("scalanative_GC_alloc_large")
   val largeAlloc = nir.Val.Global(largeAllocName, allocSig)
+
+  val setupPytonRTTIName = extern("scalanative_setupPythonRTTI")
+  val setupPytonRTTI = nir.Val.Global(largeAllocName, allocSig)
 
   val SafeZone =
     nir.Type.Ref(nir.Global.Top("scala.scalanative.memory.SafeZone"))

@@ -13,13 +13,10 @@
 #include "shared/MemoryMap.h"
 #include "shared/MemoryInfo.h"
 #include "shared/Parsing.h"
-#include "shared/ThreadUtil.h"
 #include "shared/ScalaNativeGC.h"
 #include "shared/Log.h"
 #include <assert.h>
-
-// Dummy GC that maps chunks of memory and allocates but never frees.
-#define DEFAULT_CHUNK_SIZE "64M"
+#include "python/slots.h"
 
 #if defined(__has_feature)
 #if __has_feature(address_sanitizer)
@@ -27,117 +24,97 @@
 #endif
 #endif
 
-SN_ThreadLocal void *current = 0;
-SN_ThreadLocal void *end = 0;
+int scalanative_bubbleExceptionToPython(Object* obj) {
+    printf("[bubbleExceptionToPython] Step 1\n");
+    fflush(stdout);
+    PyObject *msg = PyUnicode_FromString("scala.SomeException: something went wrong");
 
-static size_t DEFAULT_CHUNK;
-static size_t PREALLOC_CHUNK;
-static size_t CHUNK;
-static size_t TO_NORMAL_MMAP = 1L;
-static size_t DO_PREALLOC = 0L;     // No Preallocation.
+    if (msg == NULL)
+        return -1;
+
+    PyErr_SetObject(PyExc_RuntimeError, msg);
+    Py_DECREF(msg);
+
+    return 0;
+}
+
 static size_t TOTAL_ALLOCATED = 0L; // Track total allocated memory
 
-static void exitWithOutOfMemory() {
-    GC_LOG_ERROR("Out of heap space");
-    exit(1);
-}
+PyTypeObject* scalanative_PyType_fromRtti(Rtti* info);
 
-size_t scalanative_GC_get_init_heapsize() {
-    return Parse_Env_Or_Default("GC_INITIAL_HEAP_SIZE", 0L);
-}
 
-size_t scalanative_GC_get_max_heapsize() {
-    return Parse_Env_Or_Default("GC_MAXIMUM_HEAP_SIZE", getMemorySize());
-}
-
-size_t scalanative_GC_get_used_heapsize() { return TOTAL_ALLOCATED; }
-
-size_t scalanative_GC_stats_collection_total() { return -1L; }
-
-size_t scalanative_GC_stats_collection_duration_total() { return -1L; }
-
-void Prealloc_Or_Default() {
-
-    if (TO_NORMAL_MMAP == 1L) { // Check if we have prealloc env varible
-                                // or execute default mmap settings
-        size_t memorySize = getMemorySize();
-
-#if defined(SCALANATIVE_MULTITHREADING_ENABLED)
-        // Every starting thread would want to allocate chunk of memory.
-        // We want to limit their size to prevent OOM errors.
-        DEFAULT_CHUNK =
-            Choose_IF(Parse_Env_Or_Default_String("GC_THREAD_HEAP_BLOCK_SIZE",
-                                                  DEFAULT_CHUNK_SIZE),
-                      Less_OR_Equal, memorySize);
-        // Preallocation not support in multithreading mode
-#else
-        DEFAULT_CHUNK =
-            Choose_IF(Parse_Env_Or_Default_String("GC_MAXIMUM_HEAP_SIZE",
-                                                  DEFAULT_CHUNK_SIZE),
-                      Less_OR_Equal, memorySize);
-        PREALLOC_CHUNK = // Preallocation
-            Choose_IF(Parse_Env_Or_Default("GC_INITIAL_HEAP_SIZE", 0L),
-                      Less_OR_Equal, DEFAULT_CHUNK);
-#endif
-
-        if (PREALLOC_CHUNK == 0L) { // no prealloc settings.
-            CHUNK = DEFAULT_CHUNK;
-            TO_NORMAL_MMAP = 0L;
-
-        } else { // config prealloc settings and the flag to reset the
-                 // mmap settings the next iteration.
-            CHUNK = PREALLOC_CHUNK;
-            DO_PREALLOC = 1L;    // Do Preallocate.
-            TO_NORMAL_MMAP = 2L; // Return settings to normal on next iteration.
-        }
-    } else if (TO_NORMAL_MMAP == 2L) {
-        DO_PREALLOC = 0L;
-        CHUNK = DEFAULT_CHUNK;
-        TO_NORMAL_MMAP = 0L; // break the cycle and return to normal mmap alloc
-    } else {
+PyTypeObject *scalanative_PyType_allocFromRtti(Rtti *rtti) {
+    if (rtti == NULL || PyErr_Occurred() != NULL) {
+        return NULL;
     }
-}
 
-void scalanative_GC_init() {
-    GC_Log_Init();
-#ifndef GC_ASAN
-    Prealloc_Or_Default();
-    current = memoryMapPrealloc(CHUNK, DO_PREALLOC);
-    if (current == NULL) {
-        const float bytesToMB = 1024.0 * 1024.0;
-        GC_LOG_ERROR(
-            "Failed to allocate or grow heap space, "
-            "requested size=%.2fMB, available memory=%.2fMB, already "
-            "allocated=%.2fMB, should preallocate=%s. Consider setting "
-            "GC_MAXIMUM_HEAP_SIZE env variable to limit maximal heap size",
-            CHUNK / bytesToMB, getFreeMemorySize() / bytesToMB,
-            TOTAL_ALLOCATED / bytesToMB, DO_PREALLOC == 0 ? "false" : "true");
-        exit(1);
+    char *name = Rtti_name(rtti);
+    fprintf(stderr, "Allocating type \"%s\"...\n", name);
+    fflush(stderr);
+
+    if (name == NULL) {
+        return NULL;
     }
-    end = current + CHUNK;
-#ifdef _WIN32
-    if (!memoryCommit(current, CHUNK)) {
-        exitWithOutOfMemory();
+
+    PyType_Slot* slots = scalanative_PyType_decideSlots(rtti, name);
+
+    PyType_Spec spec = {
+        .name = name,
+        .basicsize = rtti->size,
+        .itemsize = 0,
+        .flags =
+            Py_TPFLAGS_DEFAULT |
+            Py_TPFLAGS_BASETYPE |
+            Py_TPFLAGS_DISALLOW_INSTANTIATION |
+            Py_TPFLAGS_IMMUTABLETYPE,
+        .slots = slots
     };
-#endif // _WIN32
-#endif // GC_ASAN
+
+    PyObject *bases = NULL;
+
+    if (rtti->superclass != NULL) {
+        PyTypeObject *base = scalanative_PyType_fromRtti(rtti->superclass);
+
+        if (base == NULL) {
+            fprintf(stderr, "[ERROR PYTY] Base is null \"%s\" %d\n", name, rtti->size);
+            fflush(stderr);
+            free(name);
+            return NULL;
+        }
+
+        bases = (PyObject *)base;
+    }
+
+    PyObject *obj = PyType_FromSpecWithBases(&spec, bases);
+
+    Py_XDECREF(bases);
+
+    // fprintf(stderr, " OK!\n");
+    // fflush(stderr);
+
+    return (PyTypeObject *)obj;
+}
+
+PyTypeObject* scalanative_PyType_fromRtti(Rtti* info) {
+    if(info->pyType == NULL) {
+        info->pyType = scalanative_PyType_allocFromRtti(info);
+    }
+
+    return info->pyType;
 }
 
 void *scalanative_GC_alloc(Rtti *info, size_t size) {
     size = (size + 7) & ~((size_t)7); // alignment
 
-    // safety check that will be removed afterwards
-    if(size >= 100000) {
-        fprintf(stderr,
-            "[WARN] Tried to allocate %zu bytes\n",
-            size);
-        return (void*)0;
-    }
-    
     Object *alloc = (Object *) PyObject_Calloc(1, size);
+    // fprintf(stderr, "Allocation [%zu bytes]: %p\n", size, alloc);
+    // fflush(stderr);
+
+    PyTypeObject* py_type = scalanative_PyType_fromRtti(info);
 
     Py_SET_REFCNT(alloc, 1);
-    Py_SET_TYPE(&alloc->py, NULL);
+    Py_SET_TYPE(&alloc->py, py_type);
+
 
     alloc->rtti = info;
     TOTAL_ALLOCATED += size;
@@ -186,4 +163,47 @@ void scalanative_GC_set_mutator_thread_state(GC_MutatorThreadState unused) {}
 void scalanative_GC_yield() {}
 void scalanative_GC_add_roots(void *addr_low, void *addr_high) {}
 void scalanative_GC_remove_roots(void *addr_low, void *addr_high) {}
+
+static void exitWithOutOfMemory() {
+    GC_LOG_ERROR("Out of heap space");
+    exit(1);
+}
+
+size_t scalanative_GC_get_init_heapsize() {
+    return Parse_Env_Or_Default("GC_INITIAL_HEAP_SIZE", 0L);
+}
+
+size_t scalanative_GC_get_max_heapsize() {
+    return Parse_Env_Or_Default("GC_MAXIMUM_HEAP_SIZE", getMemorySize());
+}
+
+size_t scalanative_GC_get_used_heapsize() { return TOTAL_ALLOCATED; }
+
+size_t scalanative_GC_stats_collection_total() { return -1L; }
+
+size_t scalanative_GC_stats_collection_duration_total() { return -1L; }
+
+void Prealloc_Or_Default() {}
+
+void scalanative_GC_init() {
+    GC_Log_Init();
+    // Py_Initialize();
+}
+
+int scalanative_InitPySetType(Object *object) {
+    Rtti* rtti = object->rtti;
+    PyTypeObject* py_type = scalanative_PyType_fromRtti(rtti);
+
+    if(py_type == NULL) {
+        fprintf(stderr, "Couldn't initialize constant object\n");
+        fflush(stderr);
+        return 1;
+    }
+
+    Py_SET_REFCNT(object, PY_SSIZE_T_MAX);
+    Py_SET_TYPE(&object->py, py_type);
+
+    return 0;
+}
+
 #endif

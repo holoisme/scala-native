@@ -16,6 +16,12 @@
 #include <setjmp.h>
 #endif
 
+#ifdef SCALANATIVE_PYTHONABI
+#include <Python.h>
+#endif
+
+void scalanative_bubbleExceptionToPython(Exception obj);
+
 // gets the ExceptionWrapper from the _Unwind_Exception which is at the end of
 // it. +1 goes to the end of the struct since it adds with the size of
 // _Unwind_Exception, then we cast to ExceptionWrapper and we do - 1 to
@@ -275,7 +281,42 @@ Exception scalanative_catch(_Unwind_Exception *unwindException) {
     return exception;
 }
 
-__attribute__((noreturn)) void scalanative_throw(Exception obj) {
+
+#ifdef SCALANATIVE_PYTHONABI
+void scalanative_Throwable_throwPyErr(Exception obj) {
+    // printf("scalanative_Throwable_throwPyErr\n");
+    // fflush(stdout);
+    PyObject *msg = PyUnicode_FromString("scala.SomeException: something went wrong");
+
+    if (msg == NULL)
+        return;
+
+    // printf("Step 1\n");
+    // fflush(stdout);
+    PyErr_SetObject(PyExc_RuntimeError, msg);
+    
+    // printf("Step 2\n");
+    // fflush(stdout);
+    Py_DECREF(msg);
+    // printf("Step 3\n");
+    // fflush(stdout);
+    // abort();
+    // printf("supposed to be aborted?\n");
+    // fflush(stdout);
+}
+#endif
+
+#ifndef SCALANATIVE_PYTHONABI
+__attribute__((noreturn))
+#endif
+void scalanative_throw(Exception obj) {
+#ifdef SCALANATIVE_PYTHONABI
+    printf("called Python scalanative_throw\n");
+    fflush(stdout);
+    scalanative_Throwable_throwPyErr(obj);
+    return;
+#endif
+
     ExceptionWrapper *exceptionWrapper =
         scalanative_Throwable_exceptionWrapper(obj);
     exceptionWrapper->unwindException.exception_cleanup =
