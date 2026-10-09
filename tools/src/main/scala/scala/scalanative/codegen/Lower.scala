@@ -3,15 +3,13 @@ package scala.scalanative
 package codegen
 
 import scala.collection.mutable
+
 import scala.scalanative.nir.InstructionBuilder
 import scala.scalanative.nir.Type.Ptr as rttiObj
-
 import scalanative.interflow.UseDef.eliminateDeadCode
 import scalanative.linker.*
-import scalanative.nir.ControlFlow.Block
-import scalanative.nir.ControlFlow.Graph
-import scalanative.util.ScopedVar
-import scalanative.util.unsupported
+import scalanative.nir.ControlFlow.{Block, Graph}
+import scalanative.util.{ScopedVar, unsupported}
 
 // import scalanative.codegen.CommonMemoryLayouts
 
@@ -105,7 +103,6 @@ private[scalanative] object Lower {
     private val noSuchMethodSlowPath =
       mutable.Map.empty[Option[nir.Local], nir.Local]
 
-
 //     private val generatedStringVars =
 //       mutable.LinkedHashMap.empty[String, nir.Defn.Var]
 //
@@ -141,10 +138,11 @@ private[scalanative] object Lower {
           buf += onDefn(defn)
       }
 
-      generatedStringVars.valuesIterator.foreach { case (charsVar, stringVar) =>
+      generatedStringVars.valuesIterator.foreach {
+        case (charsVar, stringVar) =>
           buf += charsVar
           buf += stringVar
-        }
+      }
       buf.toSeq
     }
 
@@ -2184,9 +2182,9 @@ private[scalanative] object Lower {
 //     }
 //
     private def stringGlobalId(value: String): String =
-        value.iterator
-            .map(ch => Integer.toHexString(ch.toInt))
-            .mkString("s", "_", "")
+      value.iterator
+        .map(ch => Integer.toHexString(ch.toInt))
+        .mkString("s", "_", "")
 
 //     def genStringVal(value: String): nir.Val = {
 //       val StringCls = ClassRef.unapply(nir.Rt.StringName).get
@@ -2236,88 +2234,88 @@ private[scalanative] object Lower {
 //     }
 
     def genStringVal(value: String): nir.Val = {
-        generatedStringVars.get(value) match {
-            case Some((_, stringVar)) =>
-                nir.Val.Global(stringVar.name, nir.Type.Ptr)
+      generatedStringVars.get(value) match {
+        case Some((_, stringVar)) =>
+          nir.Val.Global(stringVar.name, nir.Type.Ptr)
 
-            case None =>
-                val StringCls = ClassRef.unapply(nir.Rt.StringName).get
-                val CharArrayCls = ClassRef.unapply(CharArrayName).get
+        case None =>
+          val StringCls = ClassRef.unapply(nir.Rt.StringName).get
+          val CharArrayCls = ClassRef.unapply(CharArrayName).get
 
-                val chars = value.toCharArray
-                val charsLength = nir.Val.Int(chars.length)
+          val chars = value.toCharArray
+          val charsLength = nir.Val.Int(chars.length)
 
-                val suffix = stringGlobalId(value)
+          val suffix = stringGlobalId(value)
 
-                val charsGlobal =
-                    stringGlobalsOwner.member(
-                    nir.Sig.Generated(s"chars_$suffix")
-                    )
+          val charsGlobal =
+            stringGlobalsOwner.member(
+              nir.Sig.Generated(s"chars_$suffix")
+            )
 
-                val stringGlobal =
-                    stringGlobalsOwner.member(
-                    nir.Sig.Generated(s"string_$suffix")
-                    )
+          val stringGlobal =
+            stringGlobalsOwner.member(
+              nir.Sig.Generated(s"string_$suffix")
+            )
 
-                val charsValue =
-                    nir.Val.StructValue(
-                        meta.defaultPythonHeaderVals.toList :::
-                        rtti(CharArrayCls).const ::
-                        meta.lockWordVals :::
-                        charsLength ::
-                        nir.Val.Int(2) :: // stride is used only by GC
-                        nir.Val.ArrayValue(
-                            nir.Type.Char,
-                            chars.toSeq.map(nir.Val.Char(_))
-                        ) :: Nil
-                    )
+          val charsValue =
+            nir.Val.StructValue(
+              meta.defaultPythonHeaderVals.toList :::
+                rtti(CharArrayCls).const ::
+                meta.lockWordVals :::
+                charsLength ::
+                nir.Val.Int(2) :: // stride is used only by GC
+                nir.Val.ArrayValue(
+                  nir.Type.Char,
+                  chars.toSeq.map(nir.Val.Char(_))
+                ) :: Nil
+            )
 
-                val charsVar =
-                    nir.Defn.Var(
-                        nir.Attrs.None,
-                        charsGlobal,
-                        layout(CharArrayCls).struct,
-                        charsValue
-                    )(nir.SourcePosition.NoPosition)
+          val charsVar =
+            nir.Defn.Var(
+              nir.Attrs.None,
+              charsGlobal,
+              layout(CharArrayCls).struct,
+              charsValue
+            )(nir.SourcePosition.NoPosition)
 
-                val fieldValues = stringFieldNames.map {
-                    case nir.Rt.StringValueName =>
-                    nir.Val.Global(charsGlobal, nir.Type.Ptr)
+          val fieldValues = stringFieldNames.map {
+            case nir.Rt.StringValueName =>
+              nir.Val.Global(charsGlobal, nir.Type.Ptr)
 
-                    case nir.Rt.StringOffsetName =>
-                    zero
+            case nir.Rt.StringOffsetName =>
+              zero
 
-                    case nir.Rt.StringCountName =>
-                    charsLength
+            case nir.Rt.StringCountName =>
+              charsLength
 
-                    case nir.Rt.StringCachedHashCodeName =>
-                    nir.Val.Int(stringHashCode(value))
+            case nir.Rt.StringCachedHashCodeName =>
+              nir.Val.Int(stringHashCode(value))
 
-                    case _ =>
-                    util.unreachable
-                }
+            case _ =>
+              util.unreachable
+          }
 
-                val stringValue =
-                    nir.Val.StructValue(
-                        meta.defaultPythonHeaderVals.toList :::
-                        rtti(StringCls).const ::
-                        meta.lockWordVals ++
-                        fieldValues
-                    )
+          val stringValue =
+            nir.Val.StructValue(
+              meta.defaultPythonHeaderVals.toList :::
+                rtti(StringCls).const ::
+                meta.lockWordVals ++
+                fieldValues
+            )
 
-                val stringVar =
-                    nir.Defn.Var(
-                    nir.Attrs.None,
-                    stringGlobal,
-                    layout(StringCls).struct,
-                    stringValue
-                    )(nir.SourcePosition.NoPosition)
+          val stringVar =
+            nir.Defn.Var(
+              nir.Attrs.None,
+              stringGlobal,
+              layout(StringCls).struct,
+              stringValue
+            )(nir.SourcePosition.NoPosition)
 
-                generatedStringVars +=
-                    value -> ((charsVar, stringVar))
+          generatedStringVars +=
+            value -> ((charsVar, stringVar))
 
-                nir.Val.Global(stringGlobal, nir.Type.Ptr)
-        }
+          nir.Val.Global(stringGlobal, nir.Type.Ptr)
+      }
     }
 
     private def genThisValueNullGuardIfUsed(

@@ -1,9 +1,7 @@
 package scala.scalanative
 package codegen
 
-import scalanative.linker.Class
-import scalanative.linker.ScopeInfo
-import scalanative.linker.Trait
+import scalanative.linker.{Class, ScopeInfo, Trait}
 import scalanative.util.unreachable
 
 private[codegen] class RuntimeTypeInformation(info: ScopeInfo)(implicit
@@ -84,11 +82,11 @@ private[codegen] class RuntimeTypeInformation(info: ScopeInfo)(implicit
       nir.Val.ArrayValue(nir.Type.Ptr, traits.map(meta.rtti(_).const))
     )
 
-    val pyTypeCache = if(meta.usesPythonAbi) Some(nir.Val.Null) else None
+    val pyTypeCache = if (meta.usesPythonAbi) Some(nir.Val.Null) else None
 
     val base = nir.Val.StructValue(
       meta.defaultPythonHeaderVals.toList :::
-      classConst :: meta.lockWordVals :::
+        classConst :: meta.lockWordVals :::
         typeId ::
         interfacesCount ::
         interfaces ::

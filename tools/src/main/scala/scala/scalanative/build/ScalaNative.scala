@@ -1,20 +1,20 @@
 package scala.scalanative
 package build
 
-import java.nio.file.Files
-import java.nio.file.Path
+import java.nio.file.{Files, Path}
+
 import scala.collection.mutable
 import scala.concurrent.*
+import scala.util.Success
+
 import scala.scalanative.checker.Check
 import scala.scalanative.codegen.PlatformInfo
 import scala.scalanative.codegen.llvm.CodeGen
 import scala.scalanative.interflow.Interflow
-import scala.scalanative.linker.Link
-import scala.scalanative.linker.LinkingException
-import scala.scalanative.linker.Reach
-import scala.scalanative.linker.ReachabilityAnalysis
+import scala.scalanative.linker.{
+  Link, LinkingException, Reach, ReachabilityAnalysis
+}
 import scala.scalanative.util.Scope
-import scala.util.Success
 
 /** Internal utilities to instrument Scala Native linker, optimizer and codegen.
  */

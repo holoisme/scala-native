@@ -45,7 +45,8 @@ private[codegen] class CommonMemoryLayouts(implicit meta: Metadata) {
   object ClassRtti extends Layout() {
     val usesDynMap = meta.analysis.dynsigs.nonEmpty
     private val dynMapType = if (usesDynMap) Some(DynamicHashMap.ty) else None
-    private val pyTypeCache = if (meta.usesPythonAbi) Some(nir.Type.Ptr) else None
+    private val pyTypeCache =
+      if (meta.usesPythonAbi) Some(nir.Type.Ptr) else None
     // Common layout not including variable-sized virtual table
     private val baseLayout =
       meta.pythonHeaderType.toList :::
@@ -76,10 +77,12 @@ private[codegen] class CommonMemoryLayouts(implicit meta: Metadata) {
     final val ITableSizeIdx = ReferenceOffsetsIdx + 1
     final val ItablesIdx = ITableSizeIdx + 1
     final val SuperClassIdx = ItablesIdx + 1
-    final val PyTypeCacheIdx = if(meta.usesPythonAbi) SuperClassIdx + 1 else -1
-    private final val SuperClassMergerIdx = if(meta.usesPythonAbi) PyTypeCacheIdx else SuperClassIdx
+    final val PyTypeCacheIdx = if (meta.usesPythonAbi) SuperClassIdx + 1 else -1
+    private final val SuperClassMergerIdx =
+      if (meta.usesPythonAbi) PyTypeCacheIdx else SuperClassIdx
     final val DynmapIdx = if (usesDynMap) SuperClassMergerIdx + 1 else -1
-    final val VtableIdx = if (usesDynMap) DynmapIdx + 1 else SuperClassMergerIdx + 1
+    final val VtableIdx =
+      if (usesDynMap) DynmapIdx + 1 else SuperClassMergerIdx + 1
   }
 
   object ITable extends Layout() {
@@ -94,8 +97,8 @@ private[codegen] class CommonMemoryLayouts(implicit meta: Metadata) {
   object ObjectHeader
       extends Layout(
         meta.pythonHeaderType.toList :::
-        nir.Type.Ptr :: // RTTI
-        meta.lockWordType.toList // optional, multithreading only
+          nir.Type.Ptr :: // RTTI
+          meta.lockWordType.toList // optional, multithreading only
       ) {
     final val RttiIdx = Common.RttiIdx
     final val LockWordIdx = Common.LockWordIdx
@@ -113,7 +116,7 @@ private[codegen] class CommonMemoryLayouts(implicit meta: Metadata) {
   object ArrayHeader
       extends Layout(
         meta.pythonHeaderType.toList :::
-        nir.Type.Ptr :: // RTTI
+          nir.Type.Ptr :: // RTTI
           meta.lockWordType.toList ::: // optional, multithreading only
           nir.Type.Int :: // length
           nir.Type.Int :: // stride (used only by GC)

@@ -1,8 +1,7 @@
 package scala.scalanative
 package build
 
-import java.nio.file.Path
-import java.nio.file.Paths
+import java.nio.file.{Path, Paths}
 
 /** An object describing how to configure the Scala Native toolchain. */
 sealed trait NativeConfig {
@@ -395,7 +394,7 @@ object NativeConfig {
       baseName: String,
       optimizerConfig: OptimizerConfig,
       sourceLevelDebuggingConfig: SourceLevelDebuggingConfig,
-      semanticsConfig: SemanticsConfig,
+      semanticsConfig: SemanticsConfig
   ) extends NativeConfig {
 
     def withClang(value: Path): NativeConfig =
@@ -469,10 +468,14 @@ object NativeConfig {
       copy(multithreading = Some(enabled))
 
     def withPythonABI(enabled: Boolean): NativeConfig =
-      if(enabled) {
-          copy(pythonAbi = true, gc = GC.python, buildTarget = BuildTarget.libraryDynamic)
+      if (enabled) {
+        copy(
+          pythonAbi = true,
+          gc = GC.python,
+          buildTarget = BuildTarget.libraryDynamic
+        )
       } else {
-          copy(pythonAbi = false)
+        copy(pythonAbi = false)
       }
 
     def withMultithreading(defined: Option[Boolean]): NativeConfig =

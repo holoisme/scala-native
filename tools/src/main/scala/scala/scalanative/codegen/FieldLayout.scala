@@ -1,8 +1,7 @@
 package scala.scalanative
 package codegen
 
-import scalanative.linker.Class
-import scalanative.linker.Field
+import scalanative.linker.{Class, Field}
 
 private[codegen] class FieldLayout(cls: Class)(implicit meta: Metadata) {
 

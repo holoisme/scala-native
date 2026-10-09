@@ -1,24 +1,16 @@
 package scala.scalanative
 package sbtplugin
 
-import sjsonnew.BasicJsonProtocol.BooleanJsonFormat
-import sjsonnew.BasicJsonProtocol.DoubleJsonFormat
-import sjsonnew.BasicJsonProtocol.FloatJsonFormat
-import sjsonnew.BasicJsonProtocol.IntJsonFormat
-import sjsonnew.BasicJsonProtocol.LongJsonFormat
-import sjsonnew.BasicJsonProtocol.StringJsonFormat
-import sjsonnew.BasicJsonProtocol.optionFormat
-import sjsonnew.BasicJsonProtocol.seqFormat
-import sjsonnew.BasicJsonProtocol.vectorFormat
-import sjsonnew.Builder
-import sjsonnew.JsonFormat
-import sjsonnew.Unbuilder
-import sjsonnew.deserializationError
+import java.nio.file.{Path, Paths}
 
-import java.nio.file.Path
-import java.nio.file.Paths
 import scala.scalanative.build.*
 import scala.scalanative.nir
+
+import sjsonnew.BasicJsonProtocol.{
+  BooleanJsonFormat, DoubleJsonFormat, FloatJsonFormat, IntJsonFormat,
+  LongJsonFormat, StringJsonFormat, optionFormat, seqFormat, vectorFormat
+}
+import sjsonnew.{Builder, JsonFormat, Unbuilder, deserializationError}
 
 /** sbt 2.x caches task outputs and requires a [[sjsonnew.JsonFormat]] for the
  *  result type. [[NativeConfig]] is encoded structurally: one [[JsonFormat]]

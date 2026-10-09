@@ -1,7 +1,7 @@
 package scala.scalanative.runtime
 
-import java.nio.charset.Charset
-import java.nio.charset.StandardCharsets
+import java.nio.charset.{Charset, StandardCharsets}
+
 import scala.scalanative.meta.LinktimeInfo
 import scala.scalanative.unsafe.*
 

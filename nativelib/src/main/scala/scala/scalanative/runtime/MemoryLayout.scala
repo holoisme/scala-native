@@ -1,10 +1,10 @@
 package scala.scalanative.runtime
 
 import scala.scalanative.annotation.alwaysinline
-import scala.scalanative.meta.LinktimeInfo.isMultithreadingEnabled
-import scala.scalanative.meta.LinktimeInfo.isPythonABIEnabled
-import scala.scalanative.runtime.Intrinsics.castRawSizeToInt
-import scala.scalanative.runtime.Intrinsics.sizeOf
+import scala.scalanative.meta.LinktimeInfo.{
+  isMultithreadingEnabled, isPythonABIEnabled
+}
+import scala.scalanative.runtime.Intrinsics.{castRawSizeToInt, sizeOf}
 
 private[runtime] object MemoryLayout {
 
@@ -23,11 +23,11 @@ private[runtime] object MemoryLayout {
 
   object Rtti {
     @alwaysinline def ClassOffset =
-      if(isPythonABIEnabled) PtrSize * 2
+      if (isPythonABIEnabled) PtrSize * 2
       else 0
     @alwaysinline def LockWordOffset =
       ClassOffset + (if (isMultithreadingEnabled) PtrSize
-      else requiresEnabledMulithreading)
+                     else requiresEnabledMulithreading)
     @alwaysinline def IdOffset =
       if (isMultithreadingEnabled) LockWordOffset + PtrSize
       else ClassOffset + PtrSize
@@ -50,7 +50,7 @@ private[runtime] object MemoryLayout {
 
   object ClassRtti {
     @alwaysinline def RttiOffset =
-      if(isPythonABIEnabled) PtrSize * 2
+      if (isPythonABIEnabled) PtrSize * 2
       else 0
     @alwaysinline def SizeOffset = RttiOffset + Rtti.size
     // Remaining fields has optional or contain intrinsic data,
@@ -59,11 +59,11 @@ private[runtime] object MemoryLayout {
 
   object Object {
     @alwaysinline def RttiOffset =
-      if(isPythonABIEnabled) PtrSize * 2
+      if (isPythonABIEnabled) PtrSize * 2
       else 0
     @alwaysinline def LockWordOffset =
       RttiOffset + (if (isMultithreadingEnabled) PtrSize
-      else requiresEnabledMulithreading)
+                    else requiresEnabledMulithreading)
     @alwaysinline def FieldsOffset =
       if (isMultithreadingEnabled) LockWordOffset + PtrSize
       else RttiOffset + PtrSize
@@ -71,11 +71,11 @@ private[runtime] object MemoryLayout {
 
   object Array {
     @alwaysinline def RttiOffset =
-      if(isPythonABIEnabled) PtrSize * 2
+      if (isPythonABIEnabled) PtrSize * 2
       else 0
     @alwaysinline def LockWordOffset =
       RttiOffset + (if (isMultithreadingEnabled) PtrSize
-      else requiresEnabledMulithreading)
+                    else requiresEnabledMulithreading)
     @alwaysinline def LengthOffset =
       if (isMultithreadingEnabled) LockWordOffset + PtrSize
       else RttiOffset + PtrSize

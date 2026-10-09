@@ -2,7 +2,6 @@ package scala.scalanative
 package runtime
 
 import scala.scalanative.annotation.alwaysinline
-
 import scalanative.unsafe.*
 
 /** The Boehm GC conservative garbage collector

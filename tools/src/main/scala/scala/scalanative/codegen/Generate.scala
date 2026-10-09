@@ -2,12 +2,11 @@ package scala.scalanative
 package codegen
 
 import scala.collection.mutable
+
 import scala.scalanative.build.Logger
-import scala.scalanative.linker.Class
-import scala.scalanative.linker.Field
-import scala.scalanative.linker.ReachabilityAnalysis
-import scala.scalanative.linker.ScopeInfo
-import scala.scalanative.linker.Unavailable
+import scala.scalanative.linker.{
+  Class, Field, ReachabilityAnalysis, ScopeInfo, Unavailable
+}
 
 // scalafmt: { maxColumn = 120}
 private[codegen] object Generate {
@@ -30,8 +29,8 @@ private[codegen] object Generate {
     def generate(): Seq[nir.Defn] = {
       genDefnsExcludingGenerated()
       genInjects()
-      if(meta.usesPythonAbi) {
-          genPythonRttiDecl()
+      if (meta.usesPythonAbi) {
+        genPythonRttiDecl()
       }
 
       entry.fold(genLibraryInit())(genMain(_))
@@ -43,7 +42,6 @@ private[codegen] object Generate {
       genScanableTypesIds()
       genWeakRefUtils()
       genArrayIds()
-
 
       buf.toSeq
     }
@@ -108,7 +106,7 @@ private[codegen] object Generate {
 
     private def genPythonRttiInit()(implicit fresh: nir.Fresh): Seq[nir.Inst] = {
       if (!meta.usesPythonAbi) {
-          return Seq()
+        return Seq()
       }
 
       val stringCalls =
@@ -118,7 +116,7 @@ private[codegen] object Generate {
               PySetTypeSig,
               PySetType,
               Seq(
-                stringValue,
+                stringValue
               )
             ),
             nir.Next.None

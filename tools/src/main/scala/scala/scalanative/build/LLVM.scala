@@ -1,21 +1,18 @@
 package scala.scalanative
 package build
 
-import _root_.java.io.IOException
+import java.io.{File, PrintWriter}
+import java.nio.file.{Files, Path, Paths, StandardCopyOption}
 
-import java.io.File
-import java.io.PrintWriter
-import java.nio.file.Files
-import java.nio.file.Path
-import java.nio.file.Paths
-import java.nio.file.StandardCopyOption
 import scala.concurrent.*
+import scala.sys.process.*
+import scala.util.{Failure, Success}
+
 import scala.scalanative.build.IO.RichPath
 import scala.scalanative.linker.ReachabilityAnalysis
 import scala.scalanative.nir.Attr.Link
-import scala.sys.process.*
-import scala.util.Failure
-import scala.util.Success
+
+import _root_.java.io.IOException
 
 /** Internal utilities to interact with LLVM command-line tools. */
 private[scalanative] object LLVM {

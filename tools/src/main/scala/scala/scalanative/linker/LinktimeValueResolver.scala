@@ -2,6 +2,7 @@ package scala.scalanative
 package linker
 
 import scala.collection.mutable
+
 import scala.scalanative.build.*
 import scala.scalanative.util.unsupported
 

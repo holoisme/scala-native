@@ -1,23 +1,19 @@
 package scala.scalanative
 package build
 
-import java.nio.file.FileVisitOption
-import java.nio.file.Files
-import java.nio.file.Path
-import java.nio.file.Paths
-import java.nio.file.StandardOpenOption
 import java.nio.file.attribute.FileTime
+import java.nio.file.{FileVisitOption, Files, Path, Paths, StandardOpenOption}
 import java.util.Optional
 import java.util.concurrent.Executors
+
 import scala.collection.immutable
 import scala.concurrent.*
 import scala.concurrent.duration.Duration
+import scala.util.{Properties, Success, Try}
+
 import scala.scalanative.codegen.llvm.CodeGen.IRGenerators
 import scala.scalanative.linker.ReachabilityAnalysis
 import scala.scalanative.util.Scope
-import scala.util.Properties
-import scala.util.Success
-import scala.util.Try
 
 import ScalaNative.*
 

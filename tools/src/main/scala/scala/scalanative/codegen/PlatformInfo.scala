@@ -1,7 +1,6 @@
 package scala.scalanative.codegen
 
-import scala.scalanative.build.Config
-import scala.scalanative.build.Discover
+import scala.scalanative.build.{Config, Discover}
 
 private[scalanative] case class PlatformInfo(
     targetTriple: Option[String],
